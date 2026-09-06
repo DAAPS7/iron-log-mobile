@@ -1,0 +1,33 @@
+{
+  "expo": {
+    "name": "Iron Log",
+    "slug": "iron-log",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "scheme": "ironlog",
+
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.daaps7.ironlog"
+    },
+
+    "android": {
+      "package": "com.daaps7.ironlog",
+      "adaptiveIcon": {
+        "backgroundColor": "#E3572D"
+      }
+    },
+
+    "plugins": [
+      "expo-font",
+      "expo-status-bar",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#14171B"
+        }
+      ]
+    ]
+  }
+}
