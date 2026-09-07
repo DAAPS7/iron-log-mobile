@@ -12,8 +12,13 @@ const ThemeContext = createContext(null);
 export function ThemeProvider({ children }) {
   const { settings } = useStore();
   const theme = useMemo(
-    () => buildTheme(settings?.theme === 'dark' ? 'dark' : 'light'),
-    [settings?.theme],
+    () =>
+      buildTheme(
+        settings?.theme === 'dark' ? 'dark' : 'light',
+        settings?.font,
+        settings?.palette,
+      ),
+    [settings?.theme, settings?.font, settings?.palette],
   );
 
   return <ThemeContext.Provider value={theme}>{children}</ThemeContext.Provider>;

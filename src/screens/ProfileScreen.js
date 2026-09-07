@@ -16,6 +16,7 @@ import {
   SegmentedControl,
 } from '../components/ui';
 import StatRing from '../components/StatRing';
+import MetricInsightModal from '../components/MetricInsightModal';
 import { useStore } from '../context/StoreContext';
 import { useTheme } from '../context/ThemeContext';
 import { bodyFatColor } from '../theme/theme';
@@ -39,6 +40,7 @@ export default function ProfileScreen({ navigation }) {
   const theme = useTheme();
   const { data, updateData, username } = useStore();
   const [editing, setEditing] = useState(false);
+  const [openMetric, setOpenMetric] = useState(null);
 
   const weight = useMemo(
     () => getCurrentWeight(data?.weightHistory || []),
@@ -93,7 +95,10 @@ export default function ProfileScreen({ navigation }) {
         />
       ) : (
         <>
-          <Card accent={bf != null ? bodyFatColor(bf, p.gender, theme.colors) : undefined}>
+          <Card
+            accent={bf != null ? bodyFatColor(bf, p.gender, theme.colors) : undefined}
+            onPress={() => setOpenMetric('bodyfat')}
+          >
             <CardTitle>Gordura Corporal</CardTitle>
             <View style={{ alignItems: 'center', paddingVertical: 6 }}>
               <StatRing
@@ -110,18 +115,20 @@ export default function ProfileScreen({ navigation }) {
               <Note style={{ textAlign: 'center' }}>
                 Preenche o pescoço e a cintura no perfil para veres a estimativa.
               </Note>
-            ) : null}
+            ) : (
+              <Note style={{ textAlign: 'center' }}>Toca para veres insights e definires uma meta.</Note>
+            )}
           </Card>
 
-          <Card accent={theme.colors.info}>
+          <Card accent={theme.colors.info} onPress={() => setOpenMetric('bmr')}>
             <CardTitle>Metabolismo Basal</CardTitle>
             <BigStat value={bmr ?? '—'} unit="kcal / dia" color={theme.colors.info} />
             <Note style={{ marginTop: 6 }}>
-              Energia que o corpo gasta em repouso.
+              Energia que o corpo gasta em repouso. Toca para saberes mais.
             </Note>
           </Card>
 
-          <Card accent={theme.colors.cardio}>
+          <Card accent={theme.colors.cardio} onPress={() => setOpenMetric('weight')}>
             <CardTitle>Peso Atual</CardTitle>
             <BigStat value={weight ?? '—'} unit="kg" color={theme.colors.cardio} />
             <WeightLogger
@@ -164,6 +171,20 @@ export default function ProfileScreen({ navigation }) {
           </Card>
         </>
       )}
+
+      <MetricInsightModal
+        visible={!!openMetric}
+        metric={openMetric}
+        context={{ bf, weight, metricGoals: data.metricGoals }}
+        onClose={() => setOpenMetric(null)}
+        onSaveGoal={(key, goal) => {
+          updateData((prev) => ({
+            ...prev,
+            metricGoals: { ...prev.metricGoals, [key]: goal },
+          }));
+          setOpenMetric(null);
+        }}
+      />
     </Screen>
   );
 }

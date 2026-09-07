@@ -21,6 +21,8 @@ import { useTheme } from '../context/ThemeContext';
 
 /* ---------- Estrutura de ecrã ---------- */
 
+const MAX_CONTENT_WIDTH = 640;
+
 export function Screen({ children, scroll = true, contentStyle }) {
   const theme = useTheme();
   const Container = scroll ? ScrollView : View;
@@ -34,10 +36,16 @@ export function Screen({ children, scroll = true, contentStyle }) {
         contentContainerStyle={
           scroll
             ? [
-                { padding: theme.spacing.md, paddingBottom: theme.spacing.xl * 2 },
+                {
+                  padding: theme.spacing.md,
+                  paddingBottom: theme.spacing.xl * 2,
+                  width: '100%',
+                  maxWidth: MAX_CONTENT_WIDTH,
+                  alignSelf: 'center',
+                },
                 contentStyle,
               ]
-            : undefined
+            : { width: '100%', maxWidth: MAX_CONTENT_WIDTH, alignSelf: 'center' }
         }
         keyboardShouldPersistTaps="handled"
       >
@@ -238,6 +246,7 @@ export function Button({
           paddingHorizontal: 20,
           alignItems: 'center',
           justifyContent: 'center',
+          flexShrink: 0,
           opacity: disabled ? 0.45 : pressed ? 0.8 : 1,
         },
         style,
@@ -247,6 +256,7 @@ export function Button({
         <ActivityIndicator color={palette.fg} />
       ) : (
         <Text
+          numberOfLines={1}
           style={{
             fontFamily: theme.font.bodyBold,
             fontSize: 13,

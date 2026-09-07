@@ -39,6 +39,7 @@ export function defaultSettings() {
   return {
     theme: 'light',
     font: 'unbounded-jakarta',
+    palette: 'classic',
     accentStrength: null,
     accentCardio: null,
     radius: 14,

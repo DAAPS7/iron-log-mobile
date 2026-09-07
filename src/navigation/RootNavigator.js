@@ -11,6 +11,7 @@ import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Text } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useStore } from '../context/StoreContext';
 import { useTheme } from '../context/ThemeContext';
@@ -39,6 +40,9 @@ const TAB_ICONS = {
 
 function MainTabs() {
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
+  const bottomPad = Math.max(insets.bottom, 10);
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -48,14 +52,19 @@ function MainTabs() {
         tabBarStyle: {
           backgroundColor: theme.colors.surface,
           borderTopColor: theme.colors.border,
-          height: 68,
+          borderTopWidth: 1,
+          height: 56 + bottomPad,
           paddingTop: 8,
-          paddingBottom: 10,
+          paddingBottom: bottomPad,
+        },
+        tabBarItemStyle: {
+          paddingVertical: 2,
         },
         tabBarLabelStyle: {
           fontFamily: theme.font.bodyBold,
           fontSize: 10,
           textTransform: 'uppercase',
+          marginTop: 2,
         },
         tabBarIcon: ({ focused }) => (
           <Text style={{ fontSize: 18, opacity: focused ? 1 : 0.6 }}>

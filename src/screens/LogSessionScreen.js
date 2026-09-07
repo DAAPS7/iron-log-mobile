@@ -51,23 +51,91 @@ export default function LogSessionScreen({ route, navigation }) {
 
   const workoutId = route.params?.workoutId || null;
   const isFree = !!route.params?.free;
+  const editingLogId = route.params?.logId || null;
+  const editingEntry = editingLogId
+    ? data.loggedWorkouts.find((lw) => lw.id === editingLogId)
+    : null;
   const workout = workoutId ? data.workouts.find((w) => w.id === workoutId) : null;
 
-  const [session, setSession] = useState(() => ({
-    workoutId,
-    workoutName: workout?.name || '',
-    exercises: workout ? workout.exercises.map(toSessionExercise) : [],
-  }));
+  const [session, setSession] = useState(() => {
+    if (editingEntry) {
+      const template = data.workouts.find((w) => w.id === editingEntry.workoutId);
+      let exercises;
+      if (template) {
+        // Começa a partir do treino modelo (para exercícios planeados mas
+        // não registados nesse dia continuarem visíveis), e acrescenta os
+        // que foram registados mas já não fazem parte do modelo.
+        exercises = template.exercises.map((tex) => {
+          const logged = editingEntry.exercises.find(
+            (ex) => ex.type === tex.type && ex.name === tex.name,
+          );
+          return { ...toSessionExercise(tex), sets: logged ? [...logged.sets] : [] };
+        });
+        editingEntry.exercises.forEach((ex) => {
+          const inTemplate = template.exercises.some(
+            (tex) => tex.type === ex.type && tex.name === ex.name,
+          );
+          if (!inTemplate) {
+            exercises.push({
+              name: ex.name,
+              type: ex.type,
+              muscle: ex.muscle ?? null,
+              minReps: null,
+              maxReps: null,
+              duration: null,
+              targetSets: null,
+              targetWarmupSets: null,
+              targetDistance: null,
+              targetDistanceUnit: 'km',
+              plannedNote: null,
+              sets: [...ex.sets],
+            });
+          }
+        });
+      } else {
+        exercises = editingEntry.exercises.map((ex) => ({
+          name: ex.name,
+          type: ex.type,
+          muscle: ex.muscle ?? null,
+          minReps: null,
+          maxReps: null,
+          duration: null,
+          targetSets: null,
+          targetWarmupSets: null,
+          targetDistance: null,
+          targetDistanceUnit: 'km',
+          plannedNote: null,
+          sets: [...ex.sets],
+        }));
+      }
+      return {
+        editingLogId,
+        workoutId: editingEntry.workoutId,
+        workoutName: editingEntry.workoutName,
+        date: editingEntry.date,
+        exercises,
+      };
+    }
+    return {
+      editingLogId: null,
+      workoutId,
+      workoutName: workout?.name || '',
+      date: new Date().toISOString().slice(0, 10),
+      exercises: workout ? workout.exercises.map(toSessionExercise) : [],
+    };
+  });
 
   /* ---------- Rascunho automático ----------
-     Guardado a cada alteração, para não se perder o registo se a app fechar
-     ou o telemóvel bloquear a meio do treino. */
+     Só se aplica a sessões novas — editar um registo já existente não
+     precisa de rascunho, já está guardado. */
   useEffect(() => {
+    if (session.editingLogId) return;
     AsyncStorage.setItem(DRAFT_KEY, JSON.stringify(session)).catch(() => {});
   }, [session]);
 
-  // Ao abrir, oferece retomar um rascunho compatível com esta sessão.
+  // Ao abrir uma sessão nova, oferece retomar um rascunho compatível.
   useEffect(() => {
+    if (editingLogId) return;
     (async () => {
       try {
         const raw = await AsyncStorage.getItem(DRAFT_KEY);
@@ -145,34 +213,81 @@ export default function LogSessionScreen({ route, navigation }) {
       Alert.alert('Nada registado', 'Regista pelo menos uma série.');
       return;
     }
-    const entry = {
-      id: uid(),
-      workoutId: session.workoutId,
-      workoutName: session.workoutName.trim() || 'Treino Livre',
-      date: new Date().toISOString().slice(0, 10),
-      exercises: withSets.map((ex) => ({
-        name: ex.name,
-        type: ex.type,
-        muscle: ex.muscle,
-        sets: [...ex.sets],
-      })),
-    };
-    updateData((prev) => ({
-      ...prev,
-      loggedWorkouts: [...prev.loggedWorkouts, entry],
+    const exercisesOut = withSets.map((ex) => ({
+      name: ex.name,
+      type: ex.type,
+      muscle: ex.muscle,
+      sets: [...ex.sets],
     }));
-    await AsyncStorage.removeItem(DRAFT_KEY);
+
+    if (session.editingLogId) {
+      updateData((prev) => ({
+        ...prev,
+        loggedWorkouts: prev.loggedWorkouts.map((lw) =>
+          lw.id === session.editingLogId
+            ? {
+                ...lw,
+                workoutName: session.workoutName.trim() || 'Treino Livre',
+                date: session.date,
+                exercises: exercisesOut,
+              }
+            : lw,
+        ),
+      }));
+    } else {
+      const entry = {
+        id: uid(),
+        workoutId: session.workoutId,
+        workoutName: session.workoutName.trim() || 'Treino Livre',
+        date: new Date().toISOString().slice(0, 10),
+        exercises: exercisesOut,
+      };
+      updateData((prev) => ({
+        ...prev,
+        loggedWorkouts: [...prev.loggedWorkouts, entry],
+      }));
+      await AsyncStorage.removeItem(DRAFT_KEY);
+    }
     navigation.goBack();
+  }
+
+  function removeEntry() {
+    Alert.alert('Apagar registo', 'Queres mesmo apagar este treino registado?', [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: 'Apagar',
+        style: 'destructive',
+        onPress: () => {
+          updateData((prev) => ({
+            ...prev,
+            loggedWorkouts: prev.loggedWorkouts.filter(
+              (lw) => lw.id !== session.editingLogId,
+            ),
+          }));
+          navigation.goBack();
+        },
+      },
+    ]);
   }
 
   return (
     <Screen>
-      {isFree || !workout ? (
+      {isFree || (!workout && !session.editingLogId) ? (
         <Field label="Nome do treino">
           <Input
             value={session.workoutName}
             onChangeText={(v) => setSession((p) => ({ ...p, workoutName: v }))}
             placeholder="Ex: Treino de hoje"
+          />
+        </Field>
+      ) : null}
+
+      {session.editingLogId ? (
+        <Field label="Data">
+          <Input
+            value={session.date}
+            onChangeText={(v) => setSession((p) => ({ ...p, date: v }))}
+            placeholder="AAAA-MM-DD"
           />
         </Field>
       ) : null}
@@ -194,7 +309,20 @@ export default function LogSessionScreen({ route, navigation }) {
 
       <ExtraExerciseAdder onAdd={addExtraExercise} />
 
-      <Button title="Concluir treino" variant="primary" onPress={finish} />
+      <Button
+        title={session.editingLogId ? 'Guardar alterações' : 'Concluir treino'}
+        variant="primary"
+        onPress={finish}
+      />
+
+      {session.editingLogId ? (
+        <Button
+          title="Apagar registo"
+          variant="danger"
+          onPress={removeEntry}
+          style={{ marginTop: 10 }}
+        />
+      ) : null}
     </Screen>
   );
 }

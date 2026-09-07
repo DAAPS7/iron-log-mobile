@@ -1,7 +1,8 @@
 import React, { useMemo, useState } from 'react';
-import { Pressable, useWindowDimensions, View } from 'react-native';
+import { Pressable, Text, useWindowDimensions, View } from 'react-native';
 
 import LineChart from '../components/LineChart';
+import WeightChart from '../components/WeightChart';
 import {
   Body,
   Card,
@@ -187,40 +188,26 @@ export default function ProgressScreen() {
 
       <Card>
         <CardTitle>Métrica</CardTitle>
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-          {options.map((opt) => {
-            const active = opt.key === activeKey;
-            return (
-              <Pressable
-                key={opt.key}
-                onPress={() => {
-                  setSelected(opt.key);
-                  setShowAll(false);
-                }}
-                style={{
-                  paddingVertical: 7,
-                  paddingHorizontal: 14,
-                  borderRadius: 999,
-                  borderWidth: 1.5,
-                  borderColor: active ? theme.colors.ink : theme.colors.border,
-                  backgroundColor: active ? theme.colors.ink : 'transparent',
-                }}
-              >
-                <Note color={active ? theme.colors.bg : theme.colors.muted}>
-                  {opt.label}
-                </Note>
-              </Pressable>
-            );
-          })}
-        </View>
+        <MetricDropdown
+          options={options}
+          value={activeKey}
+          onChange={(key) => {
+            setSelected(key);
+            setShowAll(false);
+          }}
+        />
       </Card>
 
       <Card>
-        <LineChart
-          points={series.points}
-          width={chartWidth}
-          color={activeKey === WEIGHT_KEY ? theme.colors.cardio : theme.colors.strength}
-        />
+        {activeKey === WEIGHT_KEY ? (
+          <WeightChart points={series.points} width={chartWidth} />
+        ) : (
+          <LineChart
+            points={series.points}
+            width={chartWidth}
+            color={theme.colors.strength}
+          />
+        )}
         <Note style={{ marginTop: 6 }}>{series.unitNote}</Note>
       </Card>
 
@@ -284,5 +271,68 @@ export default function ProgressScreen() {
         ) : null}
       </Card>
     </Screen>
+  );
+}
+
+/** Dropdown de seleção de métrica — evita listar dezenas de exercícios de uma vez. */
+function MetricDropdown({ options, value, onChange }) {
+  const theme = useTheme();
+  const [open, setOpen] = useState(false);
+  const current = options.find((o) => o.key === value);
+
+  return (
+    <View>
+      <Pressable
+        onPress={() => setOpen((o) => !o)}
+        style={{
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          borderWidth: 1.5,
+          borderColor: theme.colors.border,
+          borderRadius: theme.radiusSm,
+          padding: 12,
+          backgroundColor: theme.colors.surface,
+        }}
+      >
+        <Body>{current?.label || 'Escolher métrica'}</Body>
+        <Text style={{ color: theme.colors.muted }}>{open ? '▴' : '▾'}</Text>
+      </Pressable>
+
+      {open ? (
+        <View
+          style={{
+            borderWidth: 1.5,
+            borderColor: theme.colors.border,
+            borderRadius: theme.radiusSm,
+            marginTop: 6,
+            maxHeight: 280,
+            overflow: 'hidden',
+            backgroundColor: theme.colors.surface,
+          }}
+        >
+          <Screen scroll contentStyle={{ padding: 0 }}>
+            {options.map((opt) => (
+              <Pressable
+                key={opt.key}
+                onPress={() => {
+                  onChange(opt.key);
+                  setOpen(false);
+                }}
+                style={{
+                  padding: 12,
+                  borderTopWidth: 1,
+                  borderTopColor: theme.colors.bgSoft,
+                  backgroundColor:
+                    opt.key === value ? theme.colors.bgSoft : 'transparent',
+                }}
+              >
+                <Body>{opt.label}</Body>
+              </Pressable>
+            ))}
+          </Screen>
+        </View>
+      ) : null}
+    </View>
   );
 }

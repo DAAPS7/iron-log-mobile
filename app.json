@@ -6,28 +6,24 @@
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
     "scheme": "ironlog",
-
+    "icon": "./assets/icon.png",
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#14171B"
+    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.daaps7.ironlog"
     },
-
     "android": {
       "package": "com.daaps7.ironlog",
       "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#E3572D"
       }
     },
-
-    "plugins": [
-      "expo-font",
-      "expo-status-bar",
-      [
-        "expo-splash-screen",
-        {
-          "backgroundColor": "#14171B"
-        }
-      ]
-    ]
+    "web": {
+      "favicon": "./assets/favicon.png"
+    }
   }
 }

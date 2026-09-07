@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Alert, View } from 'react-native';
 
 import {
@@ -11,14 +11,36 @@ import {
   Screen,
   ScreenTitle,
 } from '../components/ui';
+import WeeklyScheduleModal from '../components/WeeklyScheduleModal';
+import ExerciseLibraryModal from '../components/ExerciseLibraryModal';
 import { useStore } from '../context/StoreContext';
 import { useTheme } from '../context/ThemeContext';
 import { formatMinSec } from '../lib/sets';
-import { weekdayKeyFor, WEEKDAY_LABELS } from '../lib/schedule';
+import { evaluateWeeklyReview, weekdayKeyFor, WEEKDAY_LABELS } from '../lib/schedule';
 
 export default function WorkoutsScreen({ navigation }) {
   const theme = useTheme();
   const { data, updateData } = useStore();
+  const [scheduleOpen, setScheduleOpen] = useState(false);
+  const [libraryOpen, setLibraryOpen] = useState(false);
+
+  // Ao virar a semana, verifica (uma única vez) se a semana anterior cumpriu
+  // o plano por completo, e felicita o utilizador se sim.
+  useEffect(() => {
+    if (!data) return;
+    const { shouldCongratulate, currentMonday } = evaluateWeeklyReview(data);
+    if (data.lastWeeklyReviewWeek === currentMonday) return;
+    if (shouldCongratulate) {
+      Alert.alert(
+        '🎉 Parabéns!',
+        'Cumpriste o teu plano semanal por completo — treinaste em todos os dias que tinhas definido.',
+      );
+    }
+    updateData((prev) => ({ ...prev, lastWeeklyReviewWeek: currentMonday }));
+    // Só verifica uma vez por abertura da app.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data?.loggedWorkouts, data?.weeklySchedule]);
+
   if (!data) return null;
 
   const todayKey = weekdayKeyFor(new Date());
@@ -87,6 +109,12 @@ export default function WorkoutsScreen({ navigation }) {
           title="+ Treino livre"
           variant="ghost"
           onPress={() => navigation.navigate('LogSession', { free: true })}
+        />
+        <Button title="📅 Plano Semanal" variant="ghost" onPress={() => setScheduleOpen(true)} />
+        <Button
+          title="📚 Biblioteca"
+          variant="ghost"
+          onPress={() => setLibraryOpen(true)}
         />
       </View>
 
@@ -160,6 +188,18 @@ export default function WorkoutsScreen({ navigation }) {
           </Card>
         ))
       )}
+
+      <WeeklyScheduleModal
+        visible={scheduleOpen}
+        onClose={() => setScheduleOpen(false)}
+        workouts={data.workouts}
+        schedule={data.weeklySchedule}
+        onSave={(next) => {
+          updateData((prev) => ({ ...prev, weeklySchedule: next }));
+          setScheduleOpen(false);
+        }}
+      />
+      <ExerciseLibraryModal visible={libraryOpen} onClose={() => setLibraryOpen(false)} />
     </Screen>
   );
 }

@@ -29,7 +29,7 @@ function groupByWorkoutName(loggedWorkouts) {
   return groups;
 }
 
-export default function HistoryScreen() {
+export default function HistoryScreen({ navigation }) {
   const theme = useTheme();
   const { data, updateData } = useStore();
   const [open, setOpen] = useState(() => new Set());
@@ -118,12 +118,22 @@ export default function HistoryScreen() {
                           .map((ex) => `${ex.name}: ${ex.sets.join(', ')}`)
                           .join(' · ')}
                       </Note>
-                      <Button
-                        title="Apagar"
-                        variant="danger"
-                        onPress={() => remove(lw.id)}
-                        style={{ marginTop: 10, alignSelf: 'flex-start', paddingVertical: 8, paddingHorizontal: 16 }}
-                      />
+                      <View style={{ flexDirection: 'row', gap: 8, marginTop: 10 }}>
+                        <Button
+                          title="Editar"
+                          variant="ghost"
+                          onPress={() =>
+                            navigation.navigate('LogSession', { logId: lw.id })
+                          }
+                          style={{ paddingVertical: 8, paddingHorizontal: 16 }}
+                        />
+                        <Button
+                          title="Apagar"
+                          variant="danger"
+                          onPress={() => remove(lw.id)}
+                          style={{ paddingVertical: 8, paddingHorizontal: 16 }}
+                        />
+                      </View>
                     </Card>
                   ))
                 : null}
