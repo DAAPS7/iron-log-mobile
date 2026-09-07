@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Pressable, View } from 'react-native';
 
 import {
@@ -14,7 +14,8 @@ import {
 import { useStore } from '../context/StoreContext';
 import { useTheme } from '../context/ThemeContext';
 import { FONT_OPTIONS, PALETTE_OPTIONS } from '../theme/theme';
-import { confirmAsync } from '../lib/confirm';
+import { confirmAsync, notify } from '../lib/confirm';
+import * as api from '../api/client';
 
 export default function SettingsScreen() {
   const theme = useTheme();
@@ -117,6 +118,8 @@ export default function SettingsScreen() {
         </Note>
       </Card>
 
+      <BackupsCard />
+
       <Card>
         <CardTitle>Conta</CardTitle>
         <Note style={{ marginBottom: 12 }}>Sessão iniciada como {username}.</Note>
@@ -130,5 +133,91 @@ export default function SettingsScreen() {
         />
       </Card>
     </Screen>
+  );
+}
+
+/** Cópias de segurança automáticas — uma por dia, guardadas 14 dias. */
+function BackupsCard() {
+  const theme = useTheme();
+  const { token, updateData, updateSettings } = useStore();
+  const [dates, setDates] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  async function loadDates() {
+    setLoading(true);
+    try {
+      const res = await api.listSnapshots(token);
+      setDates(res.dates);
+    } catch (e) {
+      notify('Erro', e.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function restore(date) {
+    const ok = await confirmAsync(
+      'Restaurar cópia',
+      `Isto substitui os teus dados atuais pela cópia de ${date}. Continuar?`,
+      'Restaurar',
+    );
+    if (!ok) return;
+    try {
+      const res = await api.restoreSnapshot(token, date);
+      updateData(() => res.data);
+      updateSettings(() => res.settings);
+      notify('Restaurado', `Os teus dados foram repostos para o estado de ${date}.`);
+    } catch (e) {
+      notify('Erro', e.message);
+    }
+  }
+
+  return (
+    <Card>
+      <CardTitle
+        right={
+          <Button
+            title="Ver cópias"
+            variant="ghost"
+            onPress={loadDates}
+            loading={loading}
+            style={{ paddingVertical: 6, paddingHorizontal: 12 }}
+          />
+        }
+      >
+        Cópias de Segurança
+      </CardTitle>
+      <Note style={{ marginBottom: dates ? 10 : 0 }}>
+        O servidor guarda automaticamente uma cópia dos teus dados por dia
+        (mantidas 14 dias) — uma rede de segurança caso algo corra mal.
+      </Note>
+      {dates ? (
+        dates.length ? (
+          dates.map((d) => (
+            <View
+              key={d}
+              style={{
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                paddingVertical: 8,
+                borderTopWidth: 1,
+                borderTopColor: theme.colors.bgSoft,
+              }}
+            >
+              <Body>{d}</Body>
+              <Button
+                title="Restaurar"
+                variant="danger"
+                onPress={() => restore(d)}
+                style={{ paddingVertical: 6, paddingHorizontal: 12 }}
+              />
+            </View>
+          ))
+        ) : (
+          <Note>Ainda sem cópias guardadas.</Note>
+        )
+      ) : null}
+    </Card>
   );
 }

@@ -84,3 +84,13 @@ export function friendsAction(token, payload) {
 export function searchFood(query) {
   return request(`/off-search?q=${encodeURIComponent(query)}`);
 }
+
+/* ---------- Cópias de segurança ---------- */
+
+export function listSnapshots(token) {
+  return request('/snapshots', { token });
+}
+
+export function restoreSnapshot(token, date) {
+  return request('/snapshots-restore', { method: 'POST', token, body: { date } });
+}
