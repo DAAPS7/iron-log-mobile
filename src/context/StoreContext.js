@@ -4,7 +4,13 @@
  * Estratégia de persistência (igual à da versão web):
  *  - AsyncStorage guarda uma cópia local, para a app abrir instantaneamente
  *    e continuar utilizável sem rede;
- *  - o servidor é a fonte de verdade, sincronizado em segundo plano.
+ *  - o servidor é a fonte de verdade — MAS só quando sabemos que não há
+ *    alterações locais por gravar. Se a última gravação para o servidor
+ *    não tiver sido confirmada (`dirty: true`), a cache local é tratada
+ *    como a versão mais recente, e é ela que é empurrada para o servidor —
+ *    nunca o contrário. Sem isto, uma gravação falhada (ex: sem rede
+ *    momentaneamente) fazia com que, ao reabrires a app, os dados antigos
+ *    do servidor apagassem por cima os teus registos mais recentes.
  *
  * As gravações para o servidor são agrupadas (debounce) para não fazer um
  * pedido por cada toque enquanto registas um treino.
@@ -38,42 +44,8 @@ export function StoreProvider({ children }) {
   const [syncState, setSyncState] = useState('idle'); // idle | saving | offline
 
   const saveTimer = useRef(null);
-  const latest = useRef({ token: null, data: null, settings: null });
-  latest.current = { token, data, settings };
-
-  /* ---------- Arranque: carrega a cache e sincroniza ---------- */
-
-  useEffect(() => {
-    (async () => {
-      try {
-        const raw = await AsyncStorage.getItem(CACHE_KEY);
-        if (raw) {
-          const cached = JSON.parse(raw);
-          if (cached.token) {
-            setToken(cached.token);
-            setUsername(cached.username);
-            setData(mergeData(cached.data));
-            setSettings(mergeSettings(cached.settings));
-
-            // Atualiza a partir do servidor, sem bloquear o arranque
-            api
-              .loadData(cached.token)
-              .then((res) => {
-                setData(mergeData(res.data));
-                setSettings(mergeSettings(res.settings));
-              })
-              .catch((err) => {
-                if (err.status === 401) signOut();
-              });
-          }
-        }
-      } catch (e) {
-        console.warn('Falha ao ler a cache local', e);
-      } finally {
-        setBooting(false);
-      }
-    })();
-  }, []);
+  const latest = useRef({ token: null, username: null, data: null, settings: null });
+  latest.current = { token, username, data, settings };
 
   /* ---------- Persistência ---------- */
 
@@ -86,15 +58,80 @@ export function StoreProvider({ children }) {
   }, []);
 
   const flushToServer = useCallback(async () => {
-    const { token: t, data: d, settings: s } = latest.current;
+    const { token: t, username: u, data: d, settings: s } = latest.current;
     if (!t || !d) return;
     setSyncState('saving');
     try {
       await api.saveData(t, d, s);
       setSyncState('idle');
+      // Confirma na cache que isto já está a salvo no servidor — usa o
+      // estado mais atual (pode ter mudado entretanto), não o que foi
+      // capturado no início desta gravação.
+      await writeCache({
+        token: latest.current.token,
+        username: latest.current.username,
+        data: latest.current.data,
+        settings: latest.current.settings,
+        dirty: false,
+      });
     } catch (e) {
       setSyncState('offline');
     }
+  }, [writeCache]);
+
+  /* ---------- Arranque: carrega a cache e só sincroniza com segurança ---------- */
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const raw = await AsyncStorage.getItem(CACHE_KEY);
+        if (raw) {
+          const cached = JSON.parse(raw);
+          if (cached.token) {
+            const cachedData = mergeData(cached.data);
+            const cachedSettings = mergeSettings(cached.settings);
+            setToken(cached.token);
+            setUsername(cached.username);
+            setData(cachedData);
+            setSettings(cachedSettings);
+            // Atualiza a referência já, sem esperar por um novo render —
+            // flushToServer (chamado ainda dentro desta função) precisa de
+            // ler estes valores imediatamente, não os antigos.
+            latest.current = {
+              token: cached.token,
+              username: cached.username,
+              data: cachedData,
+              settings: cachedSettings,
+            };
+
+            if (cached.dirty) {
+              // Há alterações locais que podem não ter chegado ao
+              // servidor da última vez. Em vez de as substituir pelo que
+              // vier de lá, empurra-as já para o servidor primeiro.
+              await flushToServer();
+            } else {
+              // Sem alterações pendentes — seguro trazer a versão mais
+              // recente do servidor (útil se tiveres usado outro
+              // dispositivo entretanto).
+              api
+                .loadData(cached.token)
+                .then((res) => {
+                  setData(mergeData(res.data));
+                  setSettings(mergeSettings(res.settings));
+                })
+                .catch((err) => {
+                  if (err.status === 401) signOut();
+                });
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('Falha ao ler a cache local', e);
+      } finally {
+        setBooting(false);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const scheduleSave = useCallback(() => {
@@ -113,16 +150,17 @@ export function StoreProvider({ children }) {
         const next = typeof updater === 'function' ? updater(prev) : updater;
         writeCache({
           token: latest.current.token,
-          username,
+          username: latest.current.username,
           data: next,
           settings: latest.current.settings,
+          dirty: true,
         });
         latest.current = { ...latest.current, data: next };
         scheduleSave();
         return next;
       });
     },
-    [scheduleSave, username, writeCache],
+    [scheduleSave, writeCache],
   );
 
   const updateSettings = useCallback(
@@ -131,16 +169,17 @@ export function StoreProvider({ children }) {
         const next = typeof updater === 'function' ? updater(prev) : updater;
         writeCache({
           token: latest.current.token,
-          username,
+          username: latest.current.username,
           data: latest.current.data,
           settings: next,
+          dirty: true,
         });
         latest.current = { ...latest.current, settings: next };
         scheduleSave();
         return next;
       });
     },
-    [scheduleSave, username, writeCache],
+    [scheduleSave, writeCache],
   );
 
   /* ---------- Sessão ---------- */
@@ -153,11 +192,18 @@ export function StoreProvider({ children }) {
       setUsername(res.displayName);
       setData(nextData);
       setSettings(nextSettings);
+      latest.current = {
+        token: res.token,
+        username: res.displayName,
+        data: nextData,
+        settings: nextSettings,
+      };
       await writeCache({
         token: res.token,
         username: res.displayName,
         data: nextData,
         settings: nextSettings,
+        dirty: false,
       });
     },
     [writeCache],
