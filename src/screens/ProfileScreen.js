@@ -19,6 +19,8 @@ import StatRing from '../components/StatRing';
 import MetricInsightModal from '../components/MetricInsightModal';
 import { useStore } from '../context/StoreContext';
 import { useTheme } from '../context/ThemeContext';
+import { todayLocal } from '../lib/date';
+import { evaluateAllGoals } from '../lib/goals';
 import { bodyFatColor } from '../theme/theme';
 import {
   classifyBodyFat,
@@ -81,7 +83,7 @@ export default function ProfileScreen({ navigation }) {
           onCancel={p ? () => setEditing(false) : null}
           onSave={(profile, newWeight) => {
             updateData((prev) => {
-              const today = new Date().toISOString().slice(0, 10);
+              const today = todayLocal();
               const history = [...prev.weightHistory];
               const idx = history.findIndex((w) => w.date === today);
               if (newWeight != null) {
@@ -141,7 +143,7 @@ export default function ProfileScreen({ navigation }) {
             <WeightLogger
               onLog={(kg) =>
                 updateData((prev) => {
-                  const today = new Date().toISOString().slice(0, 10);
+                  const today = todayLocal();
                   const history = [...prev.weightHistory];
                   const idx = history.findIndex((w) => w.date === today);
                   if (idx >= 0) history[idx] = { date: today, weight: kg };
@@ -176,6 +178,8 @@ export default function ProfileScreen({ navigation }) {
             </Note>
             <Note style={{ marginTop: 6 }}>Sessão: {username}</Note>
           </Card>
+
+          <GoalHistoryCard goals={data.exerciseGoals || []} loggedWorkouts={data.loggedWorkouts} />
         </>
       )}
 
@@ -362,6 +366,52 @@ function ProfileForm({ profile, currentWeight, onSave, onCancel }) {
           style={{ marginTop: 8 }}
         />
       ) : null}
+    </Card>
+  );
+}
+
+/** Histórico de todos os objetivos de exercício, cumpridos ou não. */
+function GoalHistoryCard({ goals, loggedWorkouts }) {
+  const theme = useTheme();
+  if (!goals.length) return null;
+
+  const evaluated = evaluateAllGoals(goals, loggedWorkouts).sort(
+    (a, b) => new Date(b.createdAt) - new Date(a.createdAt),
+  );
+
+  const STATUS = {
+    achieved: { label: '✅ Cumprido', color: theme.colors.good },
+    missed: { label: '❌ Prazo passado', color: theme.colors.danger },
+    pending: { label: '⏳ Em curso', color: theme.colors.info },
+  };
+
+  return (
+    <Card>
+      <CardTitle>Histórico de Objetivos</CardTitle>
+      {evaluated.map((g, i) => {
+        const st = STATUS[g.status];
+        return (
+          <View
+            key={g.id}
+            style={{
+              paddingVertical: 9,
+              borderTopWidth: i === 0 ? 0 : 1,
+              borderTopColor: theme.colors.bgSoft,
+            }}
+          >
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+              <Body style={{ fontFamily: theme.font.bodyBold }}>
+                {g.exerciseName} — {g.targetWeight} kg
+              </Body>
+              <Note color={st.color}>{st.label}</Note>
+            </View>
+            <Note>
+              {g.targetDate ? `Prazo: ${g.targetDate}` : 'Sem prazo definido'}
+              {g.achievedDate ? ` · Atingido a ${g.achievedDate}` : ''}
+            </Note>
+          </View>
+        );
+      })}
     </Card>
   );
 }

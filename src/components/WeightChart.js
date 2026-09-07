@@ -15,6 +15,7 @@ import Svg, {
 } from 'react-native-svg';
 
 import { useTheme } from '../context/ThemeContext';
+import { formatLocalDate } from '../lib/date';
 
 const HEIGHT = 180;
 const PAD = { left: 42, right: 12, top: 16, bottom: 24 };
@@ -32,7 +33,7 @@ function getMonday(dateStr) {
   const d = new Date(`${dateStr}T00:00:00`);
   const day = d.getDay();
   d.setDate(d.getDate() + (day === 0 ? -6 : 1 - day));
-  return d.toISOString().slice(0, 10);
+  return formatLocalDate(d);
 }
 
 /** Agrupa pontos diários em médias semanais (uma por semana, na segunda). */

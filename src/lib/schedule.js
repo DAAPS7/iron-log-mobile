@@ -1,3 +1,5 @@
+import { formatLocalDate } from './date';
+
 /**
  * Plano semanal de treinos.
  *
@@ -29,7 +31,7 @@ export function getMonday(dateStr) {
   const d = new Date(`${dateStr}T00:00:00`);
   const day = d.getDay();
   d.setDate(d.getDate() + (day === 0 ? -6 : 1 - day));
-  return d.toISOString().slice(0, 10);
+  return formatLocalDate(d);
 }
 
 /**
@@ -43,7 +45,7 @@ export function wasWeekCompleted(schedule, loggedWorkouts, mondayStr) {
   return scheduledDays.every((day) => {
     const d = new Date(`${mondayStr}T00:00:00`);
     d.setDate(d.getDate() + DAY_OFFSET[day]);
-    const dateStr = d.toISOString().slice(0, 10);
+    const dateStr = formatLocalDate(d);
     return loggedWorkouts.some(
       (lw) => lw.date === dateStr && lw.workoutId === schedule[day],
     );
@@ -56,7 +58,7 @@ export function wasWeekCompleted(schedule, loggedWorkouts, mondayStr) {
  * currentMonday em data.lastWeeklyReviewWeek para não repetir.
  */
 export function evaluateWeeklyReview(data, today = new Date()) {
-  const currentMonday = getMonday(today.toISOString().slice(0, 10));
+  const currentMonday = getMonday(formatLocalDate(today));
   if (data.lastWeeklyReviewWeek === currentMonday) {
     return { shouldCongratulate: false, currentMonday };
   }
@@ -69,7 +71,7 @@ export function evaluateWeeklyReview(data, today = new Date()) {
 
   const prev = new Date(`${currentMonday}T00:00:00`);
   prev.setDate(prev.getDate() - 7);
-  const prevMonday = prev.toISOString().slice(0, 10);
+  const prevMonday = formatLocalDate(prev);
 
   return {
     shouldCongratulate: wasWeekCompleted(

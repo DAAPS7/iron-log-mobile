@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Modal, Pressable, Text, View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import {
@@ -15,6 +15,7 @@ import {
 } from '../components/ui';
 import { useStore } from '../context/StoreContext';
 import { useTheme } from '../context/ThemeContext';
+import { todayLocal } from '../lib/date';
 import { uid } from '../lib/defaults';
 import { confirmAsync, notify } from '../lib/confirm';
 import {
@@ -23,6 +24,7 @@ import {
   formatCardioSet,
   formatMinSec,
   formatStrengthSet,
+  getEffectivePR,
   isWarmupSet,
 } from '../lib/sets';
 
@@ -121,7 +123,7 @@ export default function LogSessionScreen({ route, navigation }) {
       editingLogId: null,
       workoutId,
       workoutName: workout?.name || '',
-      date: new Date().toISOString().slice(0, 10),
+      date: todayLocal(),
       exercises: workout ? workout.exercises.map(toSessionExercise) : [],
     };
   });
@@ -235,7 +237,7 @@ export default function LogSessionScreen({ route, navigation }) {
         id: uid(),
         workoutId: session.workoutId,
         workoutName: session.workoutName.trim() || 'Treino Livre',
-        date: new Date().toISOString().slice(0, 10),
+        date: todayLocal(),
         exercises: exercisesOut,
       };
       updateData((prev) => ({
@@ -323,7 +325,9 @@ export default function LogSessionScreen({ route, navigation }) {
 /** Um exercício dentro da sessão: alvo, séries feitas e formulário. */
 function ExerciseLogger({ exercise: ex, onAddSet, onRemoveSet, onRemove }) {
   const theme = useTheme();
+  const { data } = useStore();
   const isStrength = ex.type === 'strength';
+  const [historyOpen, setHistoryOpen] = useState(false);
 
   const [reps, setReps] = useState('');
   const [weight, setWeight] = useState('');
@@ -411,6 +415,12 @@ function ExerciseLogger({ exercise: ex, onAddSet, onRemoveSet, onRemove }) {
       {ex.plannedNote ? (
         <Note style={{ fontStyle: 'italic', marginTop: 4 }}>📝 {ex.plannedNote}</Note>
       ) : null}
+
+      <Pressable onPress={() => setHistoryOpen(true)} style={{ marginTop: 8, marginBottom: 4 }}>
+        <Note color={theme.colors.info}>
+          📊 {isStrength ? 'Últimos pesos' : 'Últimos registos'}
+        </Note>
+      </Pressable>
 
       {/* Séries já registadas */}
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
@@ -537,7 +547,114 @@ function ExerciseLogger({ exercise: ex, onAddSet, onRemoveSet, onRemove }) {
           style={{ marginTop: 10 }}
         />
       </View>
+
+      <ExerciseHistoryModal
+        visible={historyOpen}
+        onClose={() => setHistoryOpen(false)}
+        exercise={ex}
+        loggedWorkouts={data?.loggedWorkouts || []}
+        manualPRs={data?.exercisePRs || {}}
+      />
     </Card>
+  );
+}
+
+/** Últimos registos deste exercício + PR atual (se for de força). */
+function ExerciseHistoryModal({ visible, onClose, exercise: ex, loggedWorkouts, manualPRs }) {
+  const theme = useTheme();
+  const isStrength = ex.type === 'strength';
+
+  const sessions = loggedWorkouts
+    .filter((lw) => lw.exercises.some((e) => e.type === ex.type && e.name === ex.name))
+    .sort((a, b) => new Date(b.date) - new Date(a.date))
+    .slice(0, 5)
+    .map((lw) => {
+      const match = lw.exercises.find((e) => e.type === ex.type && e.name === ex.name);
+      return { date: lw.date, sets: match.sets };
+    });
+
+  const pr = isStrength ? getEffectivePR(loggedWorkouts, manualPRs, 'strength', ex.name) : null;
+
+  return (
+    <Modal visible={visible} animationType="fade" transparent onRequestClose={onClose}>
+      <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'center', padding: 24 }}>
+        <View
+          style={{
+            backgroundColor: theme.colors.surface,
+            borderRadius: theme.radius,
+            padding: theme.spacing.lg,
+            maxHeight: '80%',
+          }}
+        >
+          <View
+            style={{
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: 10,
+            }}
+          >
+            <Text
+              style={{
+                fontFamily: theme.font.display,
+                fontSize: 16,
+                color: theme.colors.ink,
+                textTransform: 'uppercase',
+                flex: 1,
+              }}
+            >
+              {ex.name}
+            </Text>
+            <Pressable onPress={onClose}>
+              <Text style={{ fontSize: 18, color: theme.colors.muted }}>✕</Text>
+            </Pressable>
+          </View>
+
+          {pr ? (
+            <View
+              style={{
+                backgroundColor: theme.colors.bgSoft,
+                borderRadius: theme.radiusSm,
+                padding: 12,
+                marginBottom: 12,
+              }}
+            >
+              <Note>PR (Recorde Pessoal)</Note>
+              <Text
+                style={{
+                  fontFamily: theme.font.display,
+                  fontSize: 22,
+                  color: theme.colors.gold,
+                }}
+              >
+                {pr.weight} {pr.unit}
+                {pr.reps ? ` @ ${pr.reps} reps` : ''}
+              </Text>
+            </View>
+          ) : null}
+
+          {sessions.length === 0 ? (
+            <Note>Ainda sem registos anteriores deste exercício.</Note>
+          ) : (
+            sessions.map((s, i) => (
+              <View
+                key={s.date + i}
+                style={{
+                  paddingVertical: 8,
+                  borderTopWidth: i === 0 ? 0 : 1,
+                  borderTopColor: theme.colors.bgSoft,
+                }}
+              >
+                <Body style={{ fontFamily: theme.font.bodyBold }}>
+                  {new Date(`${s.date}T00:00:00`).toLocaleDateString('pt-PT')}
+                </Body>
+                <Note>{s.sets.join(', ')}</Note>
+              </View>
+            ))
+          )}
+        </View>
+      </View>
+    </Modal>
   );
 }
 

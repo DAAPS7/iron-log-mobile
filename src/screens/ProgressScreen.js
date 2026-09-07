@@ -5,9 +5,12 @@ import LineChart from '../components/LineChart';
 import WeightChart from '../components/WeightChart';
 import {
   Body,
+  Button,
   Card,
   CardTitle,
   EmptyState,
+  Field,
+  Input,
   MAX_CONTENT_WIDTH,
   Note,
   Screen,
@@ -15,6 +18,8 @@ import {
 } from '../components/ui';
 import { useStore } from '../context/StoreContext';
 import { useTheme } from '../context/ThemeContext';
+import { uid } from '../lib/defaults';
+import { evaluateAllGoals } from '../lib/goals';
 import {
   computeBestFromSessions,
   getEffectivePR,
@@ -142,7 +147,7 @@ function buildSeries(data, key) {
 export default function ProgressScreen() {
   const theme = useTheme();
   const { width } = useWindowDimensions();
-  const { data } = useStore();
+  const { data, updateData } = useStore();
   const [selected, setSelected] = useState(WEIGHT_KEY);
   const [showAll, setShowAll] = useState(false);
 
@@ -225,6 +230,26 @@ export default function ProgressScreen() {
             acompanha automaticamente se apagares registos.
           </Note>
         </Card>
+      ) : null}
+
+      {activeKey && activeKey.startsWith('strength::') ? (
+        <ExerciseGoalCard
+          exerciseName={activeKey.split('::')[1]}
+          goals={data.exerciseGoals || []}
+          loggedWorkouts={data.loggedWorkouts}
+          onAdd={(goal) =>
+            updateData((prev) => ({
+              ...prev,
+              exerciseGoals: [...(prev.exerciseGoals || []), goal],
+            }))
+          }
+          onRemove={(id) =>
+            updateData((prev) => ({
+              ...prev,
+              exerciseGoals: (prev.exerciseGoals || []).filter((g) => g.id !== id),
+            }))
+          }
+        />
       ) : null}
 
       <Card>
@@ -336,5 +361,102 @@ function MetricDropdown({ options, value, onChange }) {
         </View>
       ) : null}
     </View>
+  );
+}
+
+/** Objetivos de peso definidos para o exercício atual, com estado calculado. */
+function ExerciseGoalCard({ exerciseName, goals, loggedWorkouts, onAdd, onRemove }) {
+  const theme = useTheme();
+  const [showForm, setShowForm] = useState(false);
+  const [targetWeight, setTargetWeight] = useState('');
+  const [targetDate, setTargetDate] = useState('');
+
+  const forThisExercise = useMemo(
+    () => evaluateAllGoals(goals.filter((g) => g.exerciseName === exerciseName), loggedWorkouts),
+    [goals, exerciseName, loggedWorkouts],
+  );
+
+  const STATUS_LABEL = {
+    achieved: { label: 'Cumprido', color: theme.colors.good },
+    missed: { label: 'Prazo passado', color: theme.colors.danger },
+    pending: { label: 'Em curso', color: theme.colors.info },
+  };
+
+  return (
+    <Card accent={theme.colors.info}>
+      <CardTitle
+        right={
+          <Button
+            title={showForm ? 'Cancelar' : '+ Novo objetivo'}
+            variant="ghost"
+            onPress={() => setShowForm((s) => !s)}
+            style={{ paddingVertical: 6, paddingHorizontal: 12 }}
+          />
+        }
+      >
+        Objetivo para {exerciseName}
+      </CardTitle>
+
+      {showForm ? (
+        <View style={{ marginBottom: 10 }}>
+          <View style={{ flexDirection: 'row', gap: 10 }}>
+            <Field label="Peso alvo (kg)" flex>
+              <Input value={targetWeight} onChangeText={setTargetWeight} keyboardType="decimal-pad" />
+            </Field>
+            <Field label="Data alvo (AAAA-MM-DD)" flex>
+              <Input value={targetDate} onChangeText={setTargetDate} placeholder="2026-12-01" />
+            </Field>
+          </View>
+          <Button
+            title="Guardar objetivo"
+            variant="strength"
+            onPress={() => {
+              const w = parseFloat(String(targetWeight).replace(',', '.'));
+              if (isNaN(w) || w <= 0) return;
+              onAdd({
+                id: uid(),
+                exerciseName,
+                targetWeight: w,
+                targetDate: targetDate || null,
+                createdAt: new Date().toISOString(),
+              });
+              setTargetWeight('');
+              setTargetDate('');
+              setShowForm(false);
+            }}
+          />
+        </View>
+      ) : null}
+
+      {!forThisExercise.length ? (
+        <Note>Ainda sem objetivos definidos para este exercício.</Note>
+      ) : (
+        forThisExercise.map((g) => {
+          const st = STATUS_LABEL[g.status];
+          return (
+            <View
+              key={g.id}
+              style={{
+                paddingVertical: 9,
+                borderTopWidth: 1,
+                borderTopColor: theme.colors.bgSoft,
+              }}
+            >
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                <Body style={{ fontFamily: theme.font.bodyBold }}>{g.targetWeight} kg</Body>
+                <Note color={st.color}>{st.label}</Note>
+              </View>
+              <Note>
+                {g.targetDate ? `Prazo: ${g.targetDate}` : 'Sem prazo definido'}
+                {g.achievedDate ? ` · Atingido a ${g.achievedDate}` : ''}
+              </Note>
+              <Pressable onPress={() => onRemove(g.id)}>
+                <Note color={theme.colors.danger}>Remover</Note>
+              </Pressable>
+            </View>
+          );
+        })
+      )}
+    </Card>
   );
 }

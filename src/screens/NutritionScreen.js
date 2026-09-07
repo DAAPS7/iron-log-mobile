@@ -18,14 +18,12 @@ import MealPlanBuilderModal from '../components/MealPlanBuilderModal';
 import { confirmAsync } from '../lib/confirm';
 import { useStore } from '../context/StoreContext';
 import { useTheme } from '../context/ThemeContext';
-import { caloriesFromMacros } from '../lib/biometrics';
+import { caloriesFromMacros, recommendedWaterMl } from '../lib/biometrics';
 import { uid } from '../lib/defaults';
 import { computeDayTotals, computeFoodTotals, computeMealTotals, MICRO_FIELDS, parseOffProduct } from '../lib/nutrition';
 import * as api from '../api/client';
 
-function todayISO() {
-  return new Date().toISOString().slice(0, 10);
-}
+import { formatLocalDate, todayLocal as todayISO } from '../lib/date';
 
 export default function NutritionScreen() {
   const theme = useTheme();
@@ -38,6 +36,15 @@ export default function NutritionScreen() {
     () => (data?.calorieEntries || []).filter((e) => e.date === date),
     [data?.calorieEntries, date],
   );
+  const currentWeight = useMemo(() => {
+    const history = data?.weightHistory || [];
+    if (!history.length) return null;
+    return [...history].sort((a, b) => new Date(a.date) - new Date(b.date)).pop().weight;
+  }, [data?.weightHistory]);
+  const waterEntries = useMemo(
+    () => (data?.waterEntries || []).filter((w) => w.date === date),
+    [data?.waterEntries, date],
+  );
 
   if (!data) return null;
 
@@ -47,10 +54,27 @@ export default function NutritionScreen() {
   const customFoods = data.customFoods || [];
   const mealPlans = data.mealPlans || [];
 
+  const waterGoalMl = recommendedWaterMl(currentWeight);
+  const waterTotalMl = waterEntries.reduce((sum, w) => sum + w.ml, 0);
+
+  function addWater(ml) {
+    updateData((prev) => ({
+      ...prev,
+      waterEntries: [...(prev.waterEntries || []), { id: uid(), date, ml }],
+    }));
+  }
+
+  function resetWaterDay() {
+    updateData((prev) => ({
+      ...prev,
+      waterEntries: (prev.waterEntries || []).filter((w) => w.date !== date),
+    }));
+  }
+
   function shiftDate(delta) {
     const d = new Date(`${date}T00:00:00`);
     d.setDate(d.getDate() + delta);
-    setDate(d.toISOString().slice(0, 10));
+    setDate(formatLocalDate(d));
   }
 
   function addEntry(entry) {
@@ -166,6 +190,14 @@ export default function NutritionScreen() {
         <ProgressBar label="Hidratos" value={totals.carbs} goal={macroGoals.carbs} color={theme.colors.cardio} />
         <ProgressBar label="Gordura" value={totals.fat} goal={macroGoals.fat} color={theme.colors.gold} />
       </Card>
+
+      <WaterCard
+        totalMl={waterTotalMl}
+        goalMl={waterGoalMl}
+        hasWeight={currentWeight != null}
+        onAdd={addWater}
+        onReset={resetWaterDay}
+      />
 
       {hasMicros ? (
         <Card>
@@ -324,6 +356,52 @@ export default function NutritionScreen() {
 }
 
 /** Metas de calorias e macros, com o total calórico dos macros calculado. */
+/** Tracker de água — total do dia vs. recomendação a partir do peso. */
+function WaterCard({ totalMl, goalMl, hasWeight, onAdd, onReset }) {
+  const theme = useTheme();
+  const [custom, setCustom] = useState('');
+
+  return (
+    <Card accent={theme.colors.cardio}>
+      <CardTitle>Água</CardTitle>
+      <ProgressBar value={totalMl} goal={goalMl} color={theme.colors.cardio} unit="ml" />
+      <Note style={{ marginBottom: 10 }}>
+        {hasWeight
+          ? `Recomendação estimada a partir do teu peso: ${goalMl}ml/dia.`
+          : `Sem peso registado — a usar uma referência geral de ${goalMl}ml/dia.`}
+      </Note>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}>
+        <Button title="+250ml (copo)" variant="cardio" onPress={() => onAdd(250)} style={{ paddingVertical: 8, paddingHorizontal: 14 }} />
+        <Button title="+500ml (garrafa)" variant="cardio" onPress={() => onAdd(500)} style={{ paddingVertical: 8, paddingHorizontal: 14 }} />
+      </View>
+      <View style={{ flexDirection: 'row', gap: 8 }}>
+        <Input
+          value={custom}
+          onChangeText={setCustom}
+          keyboardType="number-pad"
+          placeholder="Outra quantidade (ml)"
+          style={{ flex: 1 }}
+        />
+        <Button
+          title="Adicionar"
+          variant="ghost"
+          onPress={() => {
+            const ml = parseInt(custom, 10);
+            if (!ml || ml <= 0) return;
+            onAdd(ml);
+            setCustom('');
+          }}
+        />
+      </View>
+      {totalMl > 0 ? (
+        <Pressable onPress={onReset} style={{ marginTop: 10 }}>
+          <Note color={theme.colors.danger}>Repor o dia</Note>
+        </Pressable>
+      ) : null}
+    </Card>
+  );
+}
+
 function GoalsCard({ goal, macroGoals, onSave }) {
   const [cal, setCal] = useState(goal != null ? String(goal) : '');
   const [protein, setProtein] = useState(macroGoals.protein != null ? String(macroGoals.protein) : '');

@@ -15,6 +15,7 @@ import WeeklyScheduleModal from '../components/WeeklyScheduleModal';
 import ExerciseLibraryModal from '../components/ExerciseLibraryModal';
 import { useStore } from '../context/StoreContext';
 import { useTheme } from '../context/ThemeContext';
+import { todayLocal } from '../lib/date';
 import { formatMinSec } from '../lib/sets';
 import { evaluateWeeklyReview, weekdayKeyFor, WEEKDAY_LABELS } from '../lib/schedule';
 import { confirmAsync, notify } from '../lib/confirm';
@@ -47,7 +48,7 @@ export default function WorkoutsScreen({ navigation }) {
   const todayKey = weekdayKeyFor(new Date());
   const scheduledId = data.weeklySchedule?.[todayKey];
   const scheduled = data.workouts.find((w) => w.id === scheduledId);
-  const todayStr = new Date().toISOString().slice(0, 10);
+  const todayStr = todayLocal();
   const alreadyDone =
     scheduled &&
     data.loggedWorkouts.some(

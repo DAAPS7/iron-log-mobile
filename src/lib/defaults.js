@@ -13,6 +13,8 @@ export function defaultData() {
     workouts: [],
     loggedWorkouts: [],
     calorieEntries: [],
+    waterEntries: [],
+    exerciseGoals: [],
     calorieGoal: null,
     macroGoals: { protein: null, carbs: null, fat: null },
     exercisePRs: {},

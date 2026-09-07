@@ -83,3 +83,13 @@ export function computeBMR(gender, weightKg, heightM, age) {
 export function caloriesFromMacros({ protein, carbs, fat }) {
   return Math.round((protein || 0) * 4 + (carbs || 0) * 4 + (fat || 0) * 9);
 }
+
+/**
+ * Água recomendada por dia, em mililitros — estimativa geral de ~35ml por
+ * kg de peso corporal (referência comum, não uma recomendação médica
+ * personalizada). Sem peso registado, usa um valor de referência genérico.
+ */
+export function recommendedWaterMl(weightKg) {
+  if (!weightKg) return 2000;
+  return Math.round((weightKg * 35) / 50) * 50; // arredonda aos 50ml
+}
