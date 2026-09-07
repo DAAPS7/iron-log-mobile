@@ -29,6 +29,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import * as api from '../api/client';
 import { mergeData, mergeSettings, defaultSettings } from '../lib/defaults';
+import { mergeUserData } from '../lib/merge';
 
 const CACHE_KEY = 'iron_log_cache_v1';
 const SAVE_DEBOUNCE_MS = 800;
@@ -62,18 +63,41 @@ export function StoreProvider({ children }) {
     if (!t || !d) return;
     setSyncState('saving');
     try {
-      await api.saveData(t, d, s);
+      const res = await api.saveData(t, d, s);
       setSyncState('idle');
-      // Confirma na cache que isto já está a salvo no servidor — usa o
-      // estado mais atual (pode ter mudado entretanto), não o que foi
-      // capturado no início desta gravação.
+
+      // Se tiveres continuado a registar coisas enquanto o pedido viajava
+      // pela rede, latest.current.data já não é o mesmo objeto que foi
+      // enviado — há uma parte nova que o servidor ainda não viu.
+      const localAdvancedDuringRequest = latest.current.data !== d;
+
+      // O servidor já funde isto com o que outros dispositivos possam ter
+      // gravado entretanto. Aqui funde-se mais uma vez com o estado local
+      // MAIS RECENTE, para essas edições feitas durante o pedido não se
+      // perderem.
+      const serverData = res && res.data ? mergeData(res.data) : null;
+      const mergedData = serverData
+        ? mergeUserData(serverData, latest.current.data)
+        : latest.current.data;
+      const mergedSettings = res && res.settings ? mergeSettings(res.settings) : latest.current.settings;
+      setData(mergedData);
+      setSettings(mergedSettings);
+      latest.current = { ...latest.current, data: mergedData, settings: mergedSettings };
+
       await writeCache({
         token: latest.current.token,
         username: latest.current.username,
-        data: latest.current.data,
-        settings: latest.current.settings,
-        dirty: false,
+        data: mergedData,
+        settings: mergedSettings,
+        // Se avançou durante o pedido, essa parte ainda não está
+        // confirmada no servidor — mantém marcado como por gravar.
+        dirty: localAdvancedDuringRequest,
       });
+
+      if (localAdvancedDuringRequest) {
+        if (saveTimer.current) clearTimeout(saveTimer.current);
+        saveTimer.current = setTimeout(flushToServer, SAVE_DEBOUNCE_MS);
+      }
     } catch (e) {
       setSyncState('offline');
     }
