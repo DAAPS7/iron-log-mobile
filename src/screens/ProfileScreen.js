@@ -131,6 +131,11 @@ export default function ProfileScreen({ navigation }) {
           <Card accent={theme.colors.cardio} onPress={() => setOpenMetric('weight')}>
             <CardTitle>Peso Atual</CardTitle>
             <BigStat value={weight ?? '—'} unit="kg" color={theme.colors.cardio} />
+            <Note style={{ marginTop: 6 }}>Toca para veres insights e definires uma meta.</Note>
+          </Card>
+
+          <Card>
+            <CardTitle>Registar Peso</CardTitle>
             <WeightLogger
               onLog={(kg) =>
                 updateData((prev) => {

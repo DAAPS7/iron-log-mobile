@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Pressable, View } from 'react-native';
+import { Alert, Pressable, View } from 'react-native';
 
 import {
   BigStat,
@@ -14,10 +14,12 @@ import {
   Screen,
   ScreenTitle,
 } from '../components/ui';
+import MealPlanBuilderModal from '../components/MealPlanBuilderModal';
 import { useStore } from '../context/StoreContext';
 import { useTheme } from '../context/ThemeContext';
 import { caloriesFromMacros } from '../lib/biometrics';
 import { uid } from '../lib/defaults';
+import { computeDayTotals, computeFoodTotals, computeMealTotals, MICRO_FIELDS, parseOffProduct } from '../lib/nutrition';
 import * as api from '../api/client';
 
 function todayISO() {
@@ -28,6 +30,8 @@ export default function NutritionScreen() {
   const theme = useTheme();
   const { data, updateData } = useStore();
   const [date, setDate] = useState(todayISO());
+  const [planModalOpen, setPlanModalOpen] = useState(false);
+  const [editingPlan, setEditingPlan] = useState(null);
 
   const entries = useMemo(
     () => (data?.calorieEntries || []).filter((e) => e.date === date),
@@ -36,18 +40,11 @@ export default function NutritionScreen() {
 
   if (!data) return null;
 
-  const totals = entries.reduce(
-    (acc, e) => ({
-      calories: acc.calories + (e.calories || 0),
-      protein: acc.protein + (e.protein || 0),
-      carbs: acc.carbs + (e.carbs || 0),
-      fat: acc.fat + (e.fat || 0),
-    }),
-    { calories: 0, protein: 0, carbs: 0, fat: 0 },
-  );
-
+  const totals = computeDayTotals(entries);
   const goal = data.calorieGoal;
   const macroGoals = data.macroGoals || {};
+  const customFoods = data.customFoods || [];
+  const mealPlans = data.mealPlans || [];
 
   function shiftDate(delta) {
     const d = new Date(`${date}T00:00:00`);
@@ -68,6 +65,64 @@ export default function NutritionScreen() {
       calorieEntries: prev.calorieEntries.filter((e) => e.id !== id),
     }));
   }
+
+  function saveCustomFood(food) {
+    updateData((prev) => ({
+      ...prev,
+      customFoods: [...(prev.customFoods || []), { ...food, id: uid() }],
+    }));
+  }
+
+  function removeCustomFood(id) {
+    updateData((prev) => ({
+      ...prev,
+      customFoods: (prev.customFoods || []).filter((f) => f.id !== id),
+    }));
+  }
+
+  function addMealToDay(meal) {
+    const newEntries = meal.foods.map((f) => ({
+      ...computeFoodTotals(f, f.quantity),
+      name: f.name,
+      id: uid(),
+      date,
+    }));
+    updateData((prev) => ({
+      ...prev,
+      calorieEntries: [...prev.calorieEntries, ...newEntries],
+    }));
+  }
+
+  function savePlan(plan) {
+    updateData((prev) => {
+      const exists = (prev.mealPlans || []).some((p) => p.id === plan.id);
+      return {
+        ...prev,
+        mealPlans: exists
+          ? prev.mealPlans.map((p) => (p.id === plan.id ? plan : p))
+          : [...(prev.mealPlans || []), plan],
+      };
+    });
+    setPlanModalOpen(false);
+    setEditingPlan(null);
+  }
+
+  function removePlan(id) {
+    Alert.alert('Apagar plano', 'Queres mesmo apagar este plano alimentar?', [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: 'Apagar',
+        style: 'destructive',
+        onPress: () =>
+          updateData((prev) => ({
+            ...prev,
+            mealPlans: (prev.mealPlans || []).filter((p) => p.id !== id),
+          })),
+      },
+    ]);
+  }
+
+  const hasMicros = MICRO_FIELDS.some((m) => totals[m.key] > 0);
 
   return (
     <Screen>
@@ -113,6 +168,24 @@ export default function NutritionScreen() {
         <ProgressBar label="Gordura" value={totals.fat} goal={macroGoals.fat} color={theme.colors.gold} />
       </Card>
 
+      {hasMicros ? (
+        <Card>
+          <CardTitle>Micronutrientes do dia</CardTitle>
+          {MICRO_FIELDS.map((m) => (
+            <View
+              key={m.key}
+              style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 4 }}
+            >
+              <Note>{m.label}</Note>
+              <Note color={theme.colors.ink}>
+                {totals[m.key]}
+                {m.unit}
+              </Note>
+            </View>
+          ))}
+        </Card>
+      ) : null}
+
       <GoalsCard
         goal={goal}
         macroGoals={macroGoals}
@@ -121,9 +194,89 @@ export default function NutritionScreen() {
         }
       />
 
-      <FoodSearchCard onAdd={addEntry} />
+      <FoodSearchCard onAdd={addEntry} onSaveCustomFood={saveCustomFood} />
+
+      <CustomFoodsCard foods={customFoods} onAdd={addEntry} onSave={saveCustomFood} onRemove={removeCustomFood} />
 
       <QuickAddCard onAdd={addEntry} />
+
+      <Card>
+        <CardTitle
+          right={
+            <Button
+              title="+ Criar plano"
+              variant="ghost"
+              onPress={() => {
+                setEditingPlan(null);
+                setPlanModalOpen(true);
+              }}
+              style={{ paddingVertical: 6, paddingHorizontal: 12 }}
+            />
+          }
+        >
+          Planos Alimentares
+        </CardTitle>
+        {!mealPlans.length ? (
+          <Note>Ainda sem planos. Cria um para montares refeições completas de uma vez.</Note>
+        ) : (
+          mealPlans.map((plan) => (
+            <View
+              key={plan.id}
+              style={{
+                paddingVertical: 10,
+                borderTopWidth: 1,
+                borderTopColor: theme.colors.bgSoft,
+              }}
+            >
+              <Body style={{ fontFamily: theme.font.bodyBold }}>{plan.name}</Body>
+              {plan.meals.map((meal) => {
+                const t = computeMealTotals(meal);
+                return (
+                  <View
+                    key={meal.id}
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      paddingVertical: 6,
+                    }}
+                  >
+                    <View style={{ flex: 1 }}>
+                      <Note color={theme.colors.ink}>{meal.name}</Note>
+                      <Note>
+                        {t.calories} kcal · P:{t.protein}g H:{t.carbs}g G:{t.fat}g
+                      </Note>
+                    </View>
+                    <Button
+                      title="Ao dia"
+                      variant="ghost"
+                      onPress={() => addMealToDay(meal)}
+                      style={{ paddingVertical: 6, paddingHorizontal: 12 }}
+                    />
+                  </View>
+                );
+              })}
+              <View style={{ flexDirection: 'row', gap: 8, marginTop: 6 }}>
+                <Button
+                  title="Editar"
+                  variant="ghost"
+                  onPress={() => {
+                    setEditingPlan(plan);
+                    setPlanModalOpen(true);
+                  }}
+                  style={{ paddingVertical: 6, paddingHorizontal: 12 }}
+                />
+                <Button
+                  title="Apagar"
+                  variant="danger"
+                  onPress={() => removePlan(plan.id)}
+                  style={{ paddingVertical: 6, paddingHorizontal: 12 }}
+                />
+              </View>
+            </View>
+          ))
+        )}
+      </Card>
 
       <Card>
         <CardTitle>Registos de hoje</CardTitle>
@@ -156,6 +309,17 @@ export default function NutritionScreen() {
           ))
         )}
       </Card>
+
+      <MealPlanBuilderModal
+        visible={planModalOpen}
+        plan={editingPlan}
+        customFoods={customFoods}
+        onClose={() => {
+          setPlanModalOpen(false);
+          setEditingPlan(null);
+        }}
+        onSave={savePlan}
+      />
     </Screen>
   );
 }
@@ -228,7 +392,7 @@ function GoalsCard({ goal, macroGoals, onSave }) {
 }
 
 /** Pesquisa na Open Food Facts (via proxy do nosso Worker). */
-function FoodSearchCard({ onAdd }) {
+function FoodSearchCard({ onAdd, onSaveCustomFood }) {
   const theme = useTheme();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
@@ -236,6 +400,7 @@ function FoodSearchCard({ onAdd }) {
   const [loading, setLoading] = useState(false);
   const [picked, setPicked] = useState(null);
   const [grams, setGrams] = useState('100');
+  const [saved, setSaved] = useState(false);
 
   async function search() {
     if (query.trim().length < 2) return;
@@ -248,14 +413,7 @@ function FoodSearchCard({ onAdd }) {
       const parsed = hits
         .map((h) => h._source || h)
         .filter((p) => p.product_name && p.nutriments?.['energy-kcal_100g'] != null)
-        .map((p) => ({
-          name: p.product_name,
-          brand: Array.isArray(p.brands) ? p.brands[0] || '' : (p.brands || '').split(',')[0],
-          calories: Math.round(p.nutriments['energy-kcal_100g'] || 0),
-          protein: Math.round((p.nutriments.proteins_100g || 0) * 10) / 10,
-          carbs: Math.round((p.nutriments.carbohydrates_100g || 0) * 10) / 10,
-          fat: Math.round((p.nutriments.fat_100g || 0) * 10) / 10,
-        }))
+        .map(parseOffProduct)
         .slice(0, 10);
       setResults(parsed);
       if (!parsed.length) setStatus('Sem resultados. Tenta outro termo.');
@@ -266,7 +424,7 @@ function FoodSearchCard({ onAdd }) {
     }
   }
 
-  const factor = (parseFloat(grams) || 0) / 100;
+  const preview = picked ? computeFoodTotals(picked, parseFloat(grams) || 0) : null;
 
   return (
     <Card>
@@ -286,7 +444,10 @@ function FoodSearchCard({ onAdd }) {
       {results.map((r, i) => (
         <Pressable
           key={i}
-          onPress={() => setPicked(r)}
+          onPress={() => {
+            setPicked(r);
+            setSaved(false);
+          }}
           style={{
             paddingVertical: 9,
             borderTopWidth: 1,
@@ -307,27 +468,30 @@ function FoodSearchCard({ onAdd }) {
           <Field label="Quantidade (g)">
             <Input value={grams} onChangeText={setGrams} keyboardType="number-pad" />
           </Field>
-          <Note style={{ marginBottom: 10 }}>
-            ≈ {Math.round(picked.calories * factor)} kcal · P:
-            {Math.round(picked.protein * factor * 10) / 10}g H:
-            {Math.round(picked.carbs * factor * 10) / 10}g G:
-            {Math.round(picked.fat * factor * 10) / 10}g
-          </Note>
+          {preview ? (
+            <Note style={{ marginBottom: 10 }}>
+              ≈ {preview.calories} kcal · P:{preview.protein}g H:{preview.carbs}g G:{preview.fat}g
+            </Note>
+          ) : null}
           <Button
             title="+ Adicionar ao dia"
             variant="strength"
             onPress={() => {
-              onAdd({
-                name: picked.name,
-                calories: Math.round(picked.calories * factor),
-                protein: Math.round(picked.protein * factor * 10) / 10,
-                carbs: Math.round(picked.carbs * factor * 10) / 10,
-                fat: Math.round(picked.fat * factor * 10) / 10,
-              });
+              onAdd({ name: picked.name, ...preview });
               setPicked(null);
               setResults([]);
               setQuery('');
             }}
+          />
+          <Button
+            title={saved ? '✓ Guardado nos teus alimentos' : 'Guardar como meu alimento'}
+            variant="ghost"
+            disabled={saved}
+            onPress={() => {
+              onSaveCustomFood(picked);
+              setSaved(true);
+            }}
+            style={{ marginTop: 8 }}
           />
         </View>
       ) : null}
@@ -335,13 +499,201 @@ function FoodSearchCard({ onAdd }) {
   );
 }
 
-/** Registo manual rápido, sem pesquisa. */
+/** Alimentos guardados pelo utilizador — pesquisados, ou que nunca apareceram na pesquisa. */
+function CustomFoodsCard({ foods, onAdd, onSave, onRemove }) {
+  const theme = useTheme();
+  const [creating, setCreating] = useState(false);
+  const [usingId, setUsingId] = useState(null);
+  const [grams, setGrams] = useState('100');
+
+  const inUse = foods.find((f) => f.id === usingId);
+  const preview = inUse ? computeFoodTotals(inUse, parseFloat(grams) || 0) : null;
+
+  return (
+    <Card>
+      <CardTitle
+        right={
+          <Button
+            title={creating ? 'Cancelar' : '+ Criar alimento'}
+            variant="ghost"
+            onPress={() => setCreating((c) => !c)}
+            style={{ paddingVertical: 6, paddingHorizontal: 12 }}
+          />
+        }
+      >
+        Meus Alimentos
+      </CardTitle>
+
+      {creating ? (
+        <CustomFoodForm
+          onSave={(food) => {
+            onSave(food);
+            setCreating(false);
+          }}
+        />
+      ) : null}
+
+      {!foods.length ? (
+        <Note>
+          Ainda não tens alimentos guardados. Usa "Guardar como meu alimento" numa
+          pesquisa, ou cria um diretamente aqui — útil para alimentos que não
+          aparecem na Open Food Facts.
+        </Note>
+      ) : (
+        foods.map((f) => (
+          <View
+            key={f.id}
+            style={{ paddingVertical: 9, borderTopWidth: 1, borderTopColor: theme.colors.bgSoft }}
+          >
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+              <View style={{ flex: 1 }}>
+                <Body>{f.name}</Body>
+                <Note>
+                  {f.calories} kcal · P:{f.protein}g H:{f.carbs}g G:{f.fat}g /100g
+                </Note>
+              </View>
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                <Button
+                  title="Usar"
+                  variant="ghost"
+                  onPress={() => setUsingId(usingId === f.id ? null : f.id)}
+                  style={{ paddingVertical: 6, paddingHorizontal: 12 }}
+                />
+                <Button
+                  title="✕"
+                  variant="danger"
+                  onPress={() => onRemove(f.id)}
+                  style={{ paddingVertical: 6, paddingHorizontal: 12 }}
+                />
+              </View>
+            </View>
+
+            {usingId === f.id ? (
+              <View style={{ marginTop: 8 }}>
+                <Field label="Quantidade (g)">
+                  <Input value={grams} onChangeText={setGrams} keyboardType="number-pad" />
+                </Field>
+                {preview ? (
+                  <Note style={{ marginBottom: 8 }}>
+                    ≈ {preview.calories} kcal · P:{preview.protein}g H:{preview.carbs}g G:
+                    {preview.fat}g
+                  </Note>
+                ) : null}
+                <Button
+                  title="+ Adicionar ao dia"
+                  variant="strength"
+                  onPress={() => {
+                    onAdd({ name: f.name, ...preview });
+                    setUsingId(null);
+                  }}
+                />
+              </View>
+            ) : null}
+          </View>
+        ))
+      )}
+    </Card>
+  );
+}
+
+/** Formulário de criação de um alimento personalizado (com micronutrientes opcionais). */
+function CustomFoodForm({ onSave }) {
+  const [name, setName] = useState('');
+  const [brand, setBrand] = useState('');
+  const [calories, setCalories] = useState('');
+  const [protein, setProtein] = useState('');
+  const [carbs, setCarbs] = useState('');
+  const [fat, setFat] = useState('');
+  const [showMicros, setShowMicros] = useState(false);
+  const [micros, setMicros] = useState({});
+
+  const theme = useTheme();
+
+  return (
+    <View
+      style={{
+        borderWidth: 1.5,
+        borderColor: theme.colors.border,
+        borderRadius: theme.radiusSm,
+        padding: 12,
+        marginBottom: 12,
+      }}
+    >
+      <Field label="Nome">
+        <Input value={name} onChangeText={setName} placeholder="Ex: Bolo da avó" />
+      </Field>
+      <Field label="Marca (opcional)">
+        <Input value={brand} onChangeText={setBrand} />
+      </Field>
+      <Note style={{ marginBottom: 8 }}>Valores por 100g:</Note>
+      <View style={{ flexDirection: 'row', gap: 8 }}>
+        <Field label="Calorias" flex>
+          <Input value={calories} onChangeText={setCalories} keyboardType="number-pad" />
+        </Field>
+        <Field label="Proteína" flex>
+          <Input value={protein} onChangeText={setProtein} keyboardType="decimal-pad" />
+        </Field>
+      </View>
+      <View style={{ flexDirection: 'row', gap: 8 }}>
+        <Field label="Hidratos" flex>
+          <Input value={carbs} onChangeText={setCarbs} keyboardType="decimal-pad" />
+        </Field>
+        <Field label="Gordura" flex>
+          <Input value={fat} onChangeText={setFat} keyboardType="decimal-pad" />
+        </Field>
+      </View>
+
+      <Pressable onPress={() => setShowMicros((s) => !s)} style={{ marginBottom: 8 }}>
+        <Note color={theme.colors.ink}>
+          {showMicros ? '▴' : '▾'} Micronutrientes (opcional)
+        </Note>
+      </Pressable>
+      {showMicros
+        ? MICRO_FIELDS.map((m) => (
+            <Field key={m.key} label={`${m.label} (${m.unit})`}>
+              <Input
+                value={micros[m.key] || ''}
+                onChangeText={(v) => setMicros((prev) => ({ ...prev, [m.key]: v }))}
+                keyboardType="decimal-pad"
+              />
+            </Field>
+          ))
+        : null}
+
+      <Button
+        title="Guardar alimento"
+        variant="strength"
+        onPress={() => {
+          const cal = parseFloat(calories);
+          if (!name.trim() || isNaN(cal)) return;
+          const food = {
+            name: name.trim(),
+            brand: brand.trim(),
+            calories: cal,
+            protein: parseFloat(protein) || 0,
+            carbs: parseFloat(carbs) || 0,
+            fat: parseFloat(fat) || 0,
+          };
+          MICRO_FIELDS.forEach((m) => {
+            food[m.key] = parseFloat(micros[m.key]) || 0;
+          });
+          onSave(food);
+        }}
+      />
+    </View>
+  );
+}
+
+/** Registo manual rápido, sem pesquisa nem gravação para reutilização. */
 function QuickAddCard({ onAdd }) {
+  const theme = useTheme();
   const [name, setName] = useState('');
   const [calories, setCalories] = useState('');
   const [protein, setProtein] = useState('');
   const [carbs, setCarbs] = useState('');
   const [fat, setFat] = useState('');
+  const [showMicros, setShowMicros] = useState(false);
+  const [micros, setMicros] = useState({});
 
   const num = (v) => {
     const n = parseFloat(String(v).replace(',', '.'));
@@ -368,24 +720,48 @@ function QuickAddCard({ onAdd }) {
           <Input value={fat} onChangeText={setFat} keyboardType="decimal-pad" placeholder="opc." />
         </Field>
       </View>
+
+      <Pressable onPress={() => setShowMicros((s) => !s)} style={{ marginBottom: 8 }}>
+        <Note color={theme.colors.ink}>
+          {showMicros ? '▴' : '▾'} Micronutrientes (opcional)
+        </Note>
+      </Pressable>
+      {showMicros
+        ? MICRO_FIELDS.map((m) => (
+            <Field key={m.key} label={`${m.label} (${m.unit})`}>
+              <Input
+                value={micros[m.key] || ''}
+                onChangeText={(v) => setMicros((prev) => ({ ...prev, [m.key]: v }))}
+                keyboardType="decimal-pad"
+              />
+            </Field>
+          ))
+        : null}
+
       <Button
         title="+ Adicionar"
         variant="strength"
         onPress={() => {
           const cal = num(calories);
           if (!name.trim() || cal == null) return;
-          onAdd({
+          const entry = {
             name: name.trim(),
             calories: Math.round(cal),
             protein: num(protein),
             carbs: num(carbs),
             fat: num(fat),
+          };
+          MICRO_FIELDS.forEach((m) => {
+            const v = num(micros[m.key]);
+            if (v != null) entry[m.key] = v;
           });
+          onAdd(entry);
           setName('');
           setCalories('');
           setProtein('');
           setCarbs('');
           setFat('');
+          setMicros({});
         }}
       />
     </Card>

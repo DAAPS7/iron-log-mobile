@@ -18,6 +18,7 @@ export function defaultData() {
     exercisePRs: {},
     prNotifyCache: {},
     mealPlans: [],
+    customFoods: [],
     metricGoals: {
       bodyFat: { target: null, targetDate: null },
       weight: { target: null, targetDate: null },
