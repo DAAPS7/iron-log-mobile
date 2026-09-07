@@ -87,9 +87,9 @@ export default function RootNavigator() {
   const theme = useTheme();
 
   const navTheme = {
-    ...(theme.mode === 'dark' ? DarkTheme : DefaultTheme),
+    ...(theme.mode !== 'light' ? DarkTheme : DefaultTheme),
     colors: {
-      ...(theme.mode === 'dark' ? DarkTheme : DefaultTheme).colors,
+      ...(theme.mode !== 'light' ? DarkTheme : DefaultTheme).colors,
       background: theme.colors.bg,
       card: theme.colors.surface,
       text: theme.colors.ink,

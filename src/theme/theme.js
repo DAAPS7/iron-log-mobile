@@ -60,22 +60,22 @@ export function getFontSet(key) {
 
 export const PALETTE_OPTIONS = [
   {
-    key: 'classic',
-    label: 'Laranja & Verde-água',
-    light: { strength: '#E3572D', cardio: '#1D7874', gold: '#C98A1F', info: '#6D5BD0' },
-    dark: { strength: '#FF7A4D', cardio: '#3FBAB3', gold: '#E8B84B', info: '#A596F5' },
+    key: 'inferno',
+    label: 'Inferno (laranja & vermelho)',
+    light: { strength: '#FF3D00', cardio: '#00C853', gold: '#FFAB00', info: '#D50000' },
+    dark: { strength: '#FF6E40', cardio: '#00E676', gold: '#FFD740', info: '#FF1744' },
   },
   {
-    key: 'ocean',
-    label: 'Azul & Violeta',
-    light: { strength: '#2563EB', cardio: '#0EA5A5', gold: '#B45309', info: '#7C3AED' },
-    dark: { strength: '#60A5FA', cardio: '#2DD4BF', gold: '#F0B94E', info: '#A78BFA' },
+    key: 'toxic',
+    label: 'Tóxica (verde & preto)',
+    light: { strength: '#39FF14', cardio: '#00E5FF', gold: '#FFEA00', info: '#7C4DFF' },
+    dark: { strength: '#76FF03', cardio: '#18FFFF', gold: '#FFFF00', info: '#B388FF' },
   },
   {
-    key: 'sunset',
-    label: 'Rosa & Dourado',
-    light: { strength: '#DB2777', cardio: '#0D9488', gold: '#CA8A04', info: '#9333EA' },
-    dark: { strength: '#F472B6', cardio: '#2DD4BF', gold: '#FACC15', info: '#C084FC' },
+    key: 'blood',
+    label: 'Combate (vermelho & azul-marinho)',
+    light: { strength: '#D50000', cardio: '#00838F', gold: '#0D1B4C', info: '#AA00FF' },
+    dark: { strength: '#FF1744', cardio: '#00E5FF', gold: '#5C6BC0', info: '#E040FB' },
   },
   {
     key: 'vivid',
@@ -111,18 +111,39 @@ const neutralDark = {
   danger: '#E36A6A',
 };
 
+// Modo "Preto" — pensado para ecrãs OLED (poupa bateria, contraste máximo).
+// Usa os mesmos acentos do modo escuro, só o fundo é que passa a preto puro.
+const neutralBlack = {
+  bg: '#000000',
+  bgSoft: '#0A0A0A',
+  surface: '#0D0D0D',
+  border: '#242424',
+  ink: '#F2F2F2',
+  muted: '#8B939C',
+  good: '#4ADE80',
+  danger: '#E36A6A',
+};
+
+const NEUTRALS_BY_MODE = {
+  light: neutralLight,
+  dark: neutralDark,
+  black: neutralBlack,
+};
+
 /**
- * @param {'light'|'dark'} mode
+ * @param {'light'|'dark'|'black'} mode
  * @param {string} fontKey  ver FONT_OPTIONS
  * @param {string} paletteKey  ver PALETTE_OPTIONS
  */
 export function buildTheme(mode, fontKey, paletteKey) {
+  const safeMode = NEUTRALS_BY_MODE[mode] ? mode : 'light';
   const palette = getPalette(paletteKey);
-  const neutral = mode === 'dark' ? neutralDark : neutralLight;
-  const accents = mode === 'dark' ? palette.dark : palette.light;
+  const neutral = NEUTRALS_BY_MODE[safeMode];
+  // "Preto" reaproveita os acentos do modo escuro — só o fundo muda.
+  const accents = safeMode === 'light' ? palette.light : palette.dark;
   return {
     ...base,
-    mode,
+    mode: safeMode,
     font: getFontSet(fontKey),
     colors: { ...neutral, ...accents },
   };

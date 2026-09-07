@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Alert, Pressable, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import {
@@ -16,6 +16,7 @@ import {
 import { useStore } from '../context/StoreContext';
 import { useTheme } from '../context/ThemeContext';
 import { uid } from '../lib/defaults';
+import { confirmAsync, notify } from '../lib/confirm';
 import {
   DISTANCE_UNITS,
   WEIGHT_UNITS,
@@ -145,18 +146,13 @@ export default function LogSessionScreen({ route, navigation }) {
         const hasSets = draft.exercises?.some((ex) => ex.sets.length);
         if (!sameWorkout || !hasSets) return;
 
-        Alert.alert(
+        const shouldResume = await confirmAsync(
           'Registo por terminar',
           'Tens um registo deste treino por terminar. Queres continuar de onde ficaste?',
-          [
-            {
-              text: 'Começar de novo',
-              style: 'destructive',
-              onPress: () => AsyncStorage.removeItem(DRAFT_KEY),
-            },
-            { text: 'Continuar', onPress: () => setSession(draft) },
-          ],
+          'Continuar',
         );
+        if (shouldResume) setSession(draft);
+        else await AsyncStorage.removeItem(DRAFT_KEY);
       } catch (e) {
         // rascunho ilegível — ignora
       }
@@ -210,7 +206,7 @@ export default function LogSessionScreen({ route, navigation }) {
   async function finish() {
     const withSets = session.exercises.filter((ex) => ex.sets.length);
     if (!withSets.length) {
-      Alert.alert('Nada registado', 'Regista pelo menos uma série.');
+      notify('Nada registado', 'Regista pelo menos uma série.');
       return;
     }
     const exercisesOut = withSets.map((ex) => ({
@@ -251,23 +247,20 @@ export default function LogSessionScreen({ route, navigation }) {
     navigation.goBack();
   }
 
-  function removeEntry() {
-    Alert.alert('Apagar registo', 'Queres mesmo apagar este treino registado?', [
-      { text: 'Cancelar', style: 'cancel' },
-      {
-        text: 'Apagar',
-        style: 'destructive',
-        onPress: () => {
-          updateData((prev) => ({
-            ...prev,
-            loggedWorkouts: prev.loggedWorkouts.filter(
-              (lw) => lw.id !== session.editingLogId,
-            ),
-          }));
-          navigation.goBack();
-        },
-      },
-    ]);
+  async function removeEntry() {
+    const ok = await confirmAsync(
+      'Apagar registo',
+      'Queres mesmo apagar este treino registado?',
+      'Apagar',
+    );
+    if (!ok) return;
+    updateData((prev) => ({
+      ...prev,
+      loggedWorkouts: prev.loggedWorkouts.filter(
+        (lw) => lw.id !== session.editingLogId,
+      ),
+    }));
+    navigation.goBack();
   }
 
   return (

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Alert, Pressable, View } from 'react-native';
+import { Modal, Pressable, Text, View } from 'react-native';
 
 import {
   Body,
@@ -13,6 +13,7 @@ import {
 } from '../components/ui';
 import { useStore } from '../context/StoreContext';
 import { useTheme } from '../context/ThemeContext';
+import { notify } from '../lib/confirm';
 import * as api from '../api/client';
 
 export default function FriendsScreen() {
@@ -20,6 +21,7 @@ export default function FriendsScreen() {
   const { token, data, updateData } = useStore();
 
   const [social, setSocial] = useState(null);
+  const [shareTarget, setShareTarget] = useState(null); // {username, displayName} do amigo
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
   const [busy, setBusy] = useState(false);
@@ -42,7 +44,7 @@ export default function FriendsScreen() {
       await api.friendsAction(token, payload);
       await refresh();
     } catch (e) {
-      Alert.alert('Erro', e.message);
+      notify('Erro', e.message);
     } finally {
       setBusy(false);
     }
@@ -54,7 +56,7 @@ export default function FriendsScreen() {
       const res = await api.searchFriends(token, query.trim());
       setResults(res.results || []);
     } catch (e) {
-      Alert.alert('Erro', e.message);
+      notify('Erro', e.message);
     }
   }
 
@@ -245,25 +247,10 @@ export default function FriendsScreen() {
                   style={{ paddingVertical: 7, paddingHorizontal: 12 }}
                   onPress={() => {
                     if (!data.workouts.length) {
-                      Alert.alert('Sem treinos', 'Cria um treino primeiro.');
+                      notify('Sem treinos', 'Cria um treino primeiro.');
                       return;
                     }
-                    Alert.alert(
-                      'Partilhar treino',
-                      'Escolhe o treino a partilhar:',
-                      [
-                        ...data.workouts.slice(0, 5).map((w) => ({
-                          text: w.name,
-                          onPress: () =>
-                            act({
-                              action: 'share-workout',
-                              friendUsername: f.username,
-                              workout: w,
-                            }),
-                        })),
-                        { text: 'Cancelar', style: 'cancel' },
-                      ],
-                    );
+                    setShareTarget(f);
                   }}
                 />
                 <Button
@@ -277,6 +264,62 @@ export default function FriendsScreen() {
           ))
         )}
       </Card>
+
+      <Modal
+        visible={!!shareTarget}
+        animationType="fade"
+        transparent
+        onRequestClose={() => setShareTarget(null)}
+      >
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'center', padding: 24 }}>
+          <View
+            style={{
+              backgroundColor: theme.colors.surface,
+              borderRadius: theme.radius,
+              padding: theme.spacing.lg,
+            }}
+          >
+            <Text
+              style={{
+                fontFamily: theme.font.display,
+                fontSize: 16,
+                color: theme.colors.ink,
+                textTransform: 'uppercase',
+                marginBottom: 10,
+              }}
+            >
+              Partilhar com {shareTarget?.displayName}
+            </Text>
+            <Note style={{ marginBottom: 10 }}>Escolhe o treino a partilhar:</Note>
+            {data.workouts.slice(0, 8).map((w) => (
+              <Pressable
+                key={w.id}
+                onPress={() => {
+                  act({
+                    action: 'share-workout',
+                    friendUsername: shareTarget.username,
+                    workout: w,
+                  });
+                  setShareTarget(null);
+                }}
+                style={{
+                  paddingVertical: 10,
+                  borderTopWidth: 1,
+                  borderTopColor: theme.colors.bgSoft,
+                }}
+              >
+                <Body>{w.name}</Body>
+              </Pressable>
+            ))}
+            <Button
+              title="Cancelar"
+              variant="ghost"
+              onPress={() => setShareTarget(null)}
+              style={{ marginTop: 14 }}
+            />
+          </View>
+        </View>
+      </Modal>
     </Screen>
   );
 }

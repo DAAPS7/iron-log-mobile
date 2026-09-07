@@ -1,9 +1,10 @@
 import React, { useMemo, useState } from 'react';
-import { Alert, Pressable, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 
 import { Body, Button, Card, EmptyState, Note, Screen, ScreenTitle } from '../components/ui';
 import { useStore } from '../context/StoreContext';
 import { useTheme } from '../context/ThemeContext';
+import { confirmAsync } from '../lib/confirm';
 
 function formatDate(dateStr) {
   return new Date(`${dateStr}T00:00:00`).toLocaleDateString('pt-PT', {
@@ -50,19 +51,13 @@ export default function HistoryScreen({ navigation }) {
     });
   }
 
-  function remove(id) {
-    Alert.alert('Apagar registo', 'Queres apagar este treino registado?', [
-      { text: 'Cancelar', style: 'cancel' },
-      {
-        text: 'Apagar',
-        style: 'destructive',
-        onPress: () =>
-          updateData((prev) => ({
-            ...prev,
-            loggedWorkouts: prev.loggedWorkouts.filter((lw) => lw.id !== id),
-          })),
-      },
-    ]);
+  async function remove(id) {
+    const ok = await confirmAsync('Apagar registo', 'Queres apagar este treino registado?', 'Apagar');
+    if (!ok) return;
+    updateData((prev) => ({
+      ...prev,
+      loggedWorkouts: prev.loggedWorkouts.filter((lw) => lw.id !== id),
+    }));
   }
 
   return (

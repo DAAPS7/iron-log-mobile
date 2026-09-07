@@ -128,10 +128,12 @@ export default function ProfileScreen({ navigation }) {
             </Note>
           </Card>
 
-          <Card accent={theme.colors.cardio} onPress={() => setOpenMetric('weight')}>
-            <CardTitle>Peso Atual</CardTitle>
-            <BigStat value={weight ?? '—'} unit="kg" color={theme.colors.cardio} />
-            <Note style={{ marginTop: 6 }}>Toca para veres insights e definires uma meta.</Note>
+          <Card accent={theme.colors.cardio}>
+            <Pressable onPress={() => setOpenMetric('weight')}>
+              <CardTitle>Peso Atual</CardTitle>
+              <BigStat value={weight ?? '—'} unit="kg" color={theme.colors.cardio} />
+              <Note style={{ marginTop: 6 }}>Toca para veres insights e definires uma meta.</Note>
+            </Pressable>
           </Card>
 
           <Card>

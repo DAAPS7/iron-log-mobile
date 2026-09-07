@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Alert, View } from 'react-native';
+import { View } from 'react-native';
 
 import {
   Body,
@@ -17,6 +17,7 @@ import { useStore } from '../context/StoreContext';
 import { useTheme } from '../context/ThemeContext';
 import { formatMinSec } from '../lib/sets';
 import { evaluateWeeklyReview, weekdayKeyFor, WEEKDAY_LABELS } from '../lib/schedule';
+import { confirmAsync, notify } from '../lib/confirm';
 
 export default function WorkoutsScreen({ navigation }) {
   const theme = useTheme();
@@ -31,7 +32,7 @@ export default function WorkoutsScreen({ navigation }) {
     const { shouldCongratulate, currentMonday } = evaluateWeeklyReview(data);
     if (data.lastWeeklyReviewWeek === currentMonday) return;
     if (shouldCongratulate) {
-      Alert.alert(
+      notify(
         '🎉 Parabéns!',
         'Cumpriste o teu plano semanal por completo — treinaste em todos os dias que tinhas definido.',
       );
@@ -53,19 +54,13 @@ export default function WorkoutsScreen({ navigation }) {
       (lw) => lw.date === todayStr && lw.workoutId === scheduled.id,
     );
 
-  function removeWorkout(id) {
-    Alert.alert('Apagar treino', 'Queres mesmo apagar este treino?', [
-      { text: 'Cancelar', style: 'cancel' },
-      {
-        text: 'Apagar',
-        style: 'destructive',
-        onPress: () =>
-          updateData((prev) => ({
-            ...prev,
-            workouts: prev.workouts.filter((w) => w.id !== id),
-          })),
-      },
-    ]);
+  async function removeWorkout(id) {
+    const ok = await confirmAsync('Apagar treino', 'Queres mesmo apagar este treino?', 'Apagar');
+    if (!ok) return;
+    updateData((prev) => ({
+      ...prev,
+      workouts: prev.workouts.filter((w) => w.id !== id),
+    }));
   }
 
   return (

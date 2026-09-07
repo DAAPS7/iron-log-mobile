@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Alert, Pressable, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
 import {
   BigStat,
@@ -15,6 +15,7 @@ import {
   ScreenTitle,
 } from '../components/ui';
 import MealPlanBuilderModal from '../components/MealPlanBuilderModal';
+import { confirmAsync } from '../lib/confirm';
 import { useStore } from '../context/StoreContext';
 import { useTheme } from '../context/ThemeContext';
 import { caloriesFromMacros } from '../lib/biometrics';
@@ -107,19 +108,17 @@ export default function NutritionScreen() {
     setEditingPlan(null);
   }
 
-  function removePlan(id) {
-    Alert.alert('Apagar plano', 'Queres mesmo apagar este plano alimentar?', [
-      { text: 'Cancelar', style: 'cancel' },
-      {
-        text: 'Apagar',
-        style: 'destructive',
-        onPress: () =>
-          updateData((prev) => ({
-            ...prev,
-            mealPlans: (prev.mealPlans || []).filter((p) => p.id !== id),
-          })),
-      },
-    ]);
+  async function removePlan(id) {
+    const ok = await confirmAsync(
+      'Apagar plano',
+      'Queres mesmo apagar este plano alimentar?',
+      'Apagar',
+    );
+    if (!ok) return;
+    updateData((prev) => ({
+      ...prev,
+      mealPlans: (prev.mealPlans || []).filter((p) => p.id !== id),
+    }));
   }
 
   const hasMicros = MICRO_FIELDS.some((m) => totals[m.key] > 0);

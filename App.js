@@ -50,7 +50,7 @@ function AppShell() {
 
   return (
     <>
-      <StatusBar style={theme.mode === 'dark' ? 'light' : 'dark'} />
+      <StatusBar style={theme.mode !== 'light' ? 'light' : 'dark'} />
       <RootNavigator />
     </>
   );

@@ -20,8 +20,19 @@ function round1(n) {
   return Math.round((n || 0) * 10) / 10;
 }
 
+/**
+ * Alguns planos alimentares mais antigos guardam os valores por 100g dentro
+ * de um objeto aninhado (`food.per100.calories`) em vez de diretamente no
+ * próprio alimento (`food.calories`). Isto lê de forma defensiva os dois
+ * formatos, para planos antigos não aparecerem com os macros a zero.
+ */
+function getPer100(food) {
+  return food.per100 || food;
+}
+
 /** Valores de um alimento (guardado por 100g) para uma quantidade em gramas. */
-export function computeFoodTotals(food, grams) {
+export function computeFoodTotals(rawFood, grams) {
+  const food = getPer100(rawFood);
   const factor = (grams || 0) / 100;
   const out = { calories: Math.round((food.calories || 0) * factor) };
   ALL_NUTRIENT_KEYS.forEach((key) => {

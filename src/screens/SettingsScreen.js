@@ -1,5 +1,5 @@
 import React from 'react';
-import { Alert, Pressable, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
 import {
   Body,
@@ -14,6 +14,7 @@ import {
 import { useStore } from '../context/StoreContext';
 import { useTheme } from '../context/ThemeContext';
 import { FONT_OPTIONS, PALETTE_OPTIONS } from '../theme/theme';
+import { confirmAsync } from '../lib/confirm';
 
 export default function SettingsScreen() {
   const theme = useTheme();
@@ -30,6 +31,7 @@ export default function SettingsScreen() {
             options={[
               { value: 'light', label: 'Claro' },
               { value: 'dark', label: 'Escuro' },
+              { value: 'black', label: 'Preto' },
             ]}
           />
         </Field>
@@ -64,7 +66,7 @@ export default function SettingsScreen() {
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
             {PALETTE_OPTIONS.map((p) => {
               const active = settings.palette === p.key;
-              const swatch = theme.mode === 'dark' ? p.dark : p.light;
+              const swatch = theme.mode !== 'light' ? p.dark : p.light;
               return (
                 <Pressable
                   key={p.key}
@@ -121,12 +123,10 @@ export default function SettingsScreen() {
         <Button
           title="Terminar sessão"
           variant="danger"
-          onPress={() =>
-            Alert.alert('Terminar sessão', 'Queres mesmo sair?', [
-              { text: 'Cancelar', style: 'cancel' },
-              { text: 'Sair', style: 'destructive', onPress: signOut },
-            ])
-          }
+          onPress={async () => {
+            const ok = await confirmAsync('Terminar sessão', 'Queres mesmo sair?', 'Sair');
+            if (ok) signOut();
+          }}
         />
       </Card>
     </Screen>
