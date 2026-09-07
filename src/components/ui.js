@@ -21,7 +21,7 @@ import { useTheme } from '../context/ThemeContext';
 
 /* ---------- Estrutura de ecrã ---------- */
 
-const MAX_CONTENT_WIDTH = 640;
+export const MAX_CONTENT_WIDTH = 640;
 
 export function Screen({ children, scroll = true, contentStyle }) {
   const theme = useTheme();
@@ -315,6 +315,7 @@ export function Input(props) {
           fontSize: 16, // 16 evita zoom automático em alguns teclados
           color: theme.colors.ink,
           backgroundColor: theme.colors.surface,
+          minWidth: 0,
         },
         props.style,
       ]}
@@ -343,12 +344,16 @@ export function SegmentedControl({ options, value, onChange }) {
             onPress={() => onChange(opt.value)}
             style={{
               flex: 1,
+              minWidth: 0,
               paddingVertical: 10,
+              paddingHorizontal: 6,
               alignItems: 'center',
               backgroundColor: active ? theme.colors.ink : 'transparent',
             }}
           >
             <Text
+              numberOfLines={1}
+              adjustsFontSizeToFit
               style={{
                 fontFamily: theme.font.bodyBold,
                 fontSize: 12,

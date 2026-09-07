@@ -8,6 +8,7 @@ import {
   Card,
   CardTitle,
   EmptyState,
+  MAX_CONTENT_WIDTH,
   Note,
   Screen,
   ScreenTitle,
@@ -177,7 +178,8 @@ export default function ProgressScreen() {
         )
       : null;
 
-  const chartWidth = width - theme.spacing.md * 2 - theme.spacing.lg * 2;
+  const effectiveWidth = Math.min(width, MAX_CONTENT_WIDTH);
+  const chartWidth = effectiveWidth - theme.spacing.md * 2 - theme.spacing.lg * 2;
   const visible = showAll ? series.points : series.points.slice(-3);
 
   return (

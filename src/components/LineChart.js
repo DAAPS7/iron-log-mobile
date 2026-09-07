@@ -43,6 +43,7 @@ export default function LineChart({ points, width, color, fill = true }) {
             x={PAD.left}
             y={HEIGHT / 2}
             fill={theme.colors.muted}
+            fontFamily={theme.font.body}
             fontSize="12"
           >
             Regista pelo menos 2 valores para veres o gráfico.
@@ -107,21 +108,25 @@ export default function LineChart({ points, width, color, fill = true }) {
       ))}
 
       {/* Eixo Y: extremos */}
-      <SvgText x={PAD.left - 6} y={PAD.top + 8} fill={theme.colors.muted} fontSize="10" textAnchor="end">
+      <SvgText x={PAD.left - 6} y={PAD.top + 8} fill={theme.colors.muted}
+            fontFamily={theme.font.body} fontSize="10" textAnchor="end">
         {formatNumber(max)}
       </SvgText>
-      <SvgText x={PAD.left - 6} y={PAD.top + plotH} fill={theme.colors.muted} fontSize="10" textAnchor="end">
+      <SvgText x={PAD.left - 6} y={PAD.top + plotH} fill={theme.colors.muted}
+            fontFamily={theme.font.body} fontSize="10" textAnchor="end">
         {formatNumber(min)}
       </SvgText>
 
       {/* Eixo X: primeira e última data */}
-      <SvgText x={PAD.left} y={HEIGHT - 6} fill={theme.colors.muted} fontSize="10">
+      <SvgText x={PAD.left} y={HEIGHT - 6} fill={theme.colors.muted}
+            fontFamily={theme.font.body} fontSize="10">
         {formatShortDate(points[0].date)}
       </SvgText>
       <SvgText
         x={PAD.left + plotW}
         y={HEIGHT - 6}
         fill={theme.colors.muted}
+            fontFamily={theme.font.body}
         fontSize="10"
         textAnchor="end"
       >

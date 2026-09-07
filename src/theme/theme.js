@@ -77,6 +77,12 @@ export const PALETTE_OPTIONS = [
     light: { strength: '#DB2777', cardio: '#0D9488', gold: '#CA8A04', info: '#9333EA' },
     dark: { strength: '#F472B6', cardio: '#2DD4BF', gold: '#FACC15', info: '#C084FC' },
   },
+  {
+    key: 'vivid',
+    label: 'Vívida & Agressiva',
+    light: { strength: '#E60000', cardio: '#00A63E', gold: '#0B1F4B', info: '#FF6A00' },
+    dark: { strength: '#FF3B30', cardio: '#22D46B', gold: '#3B5BA5', info: '#FF8A3D' },
+  },
 ];
 
 export function getPalette(key) {
