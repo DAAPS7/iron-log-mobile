@@ -167,14 +167,74 @@ function parseHex(hex) {
   };
 }
 
-/** Mistura duas cores hex (t entre 0 e 1). */
+function rgbToHsl({ r, g, b }) {
+  r /= 255;
+  g /= 255;
+  b /= 255;
+  const max = Math.max(r, g, b),
+    min = Math.min(r, g, b);
+  let h,
+    s,
+    l = (max + min) / 2;
+  if (max === min) {
+    h = s = 0;
+  } else {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case r:
+        h = (g - b) / d + (g < b ? 6 : 0);
+        break;
+      case g:
+        h = (b - r) / d + 2;
+        break;
+      default:
+        h = (r - g) / d + 4;
+    }
+    h /= 6;
+  }
+  return { h: h * 360, s: s * 100, l: l * 100 };
+}
+
+function hslToRgb(h, s, l) {
+  h /= 360;
+  s /= 100;
+  l /= 100;
+  let r, g, b;
+  if (s === 0) {
+    r = g = b = l;
+  } else {
+    const hue2rgb = (p, q, t) => {
+      if (t < 0) t += 1;
+      if (t > 1) t -= 1;
+      if (t < 1 / 6) return p + (q - p) * 6 * t;
+      if (t < 1 / 2) return q;
+      if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+      return p;
+    };
+    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+    const p = 2 * l - q;
+    r = hue2rgb(p, q, h + 1 / 3);
+    g = hue2rgb(p, q, h);
+    b = hue2rgb(p, q, h - 1 / 3);
+  }
+  return { r: Math.round(r * 255), g: Math.round(g * 255), b: Math.round(b * 255) };
+}
+
+/**
+ * Mistura duas cores hex (t entre 0 e 1), interpolando em HSL em vez de RGB
+ * — misturar diretamente em RGB entre um verde e um vermelho passa por um
+ * castanho/oliva lamacento no meio, que não se lê nem como verde nem como
+ * vermelho. Em HSL, o meio passa por amarelo/laranja, como um semáforo.
+ */
 export function interpolateColor(colorA, colorB, t) {
   const clamped = Math.max(0, Math.min(1, t));
-  const a = parseHex(colorA);
-  const b = parseHex(colorB);
-  const r = Math.round(a.r + (b.r - a.r) * clamped);
-  const g = Math.round(a.g + (b.g - a.g) * clamped);
-  const bl = Math.round(a.b + (b.b - a.b) * clamped);
+  const a = rgbToHsl(parseHex(colorA));
+  const b = rgbToHsl(parseHex(colorB));
+  const h = a.h + (b.h - a.h) * clamped;
+  const s = a.s + (b.s - a.s) * clamped;
+  const l = a.l + (b.l - a.l) * clamped;
+  const { r, g, b: bl } = hslToRgb(h, s, l);
   return `rgb(${r}, ${g}, ${bl})`;
 }
 
