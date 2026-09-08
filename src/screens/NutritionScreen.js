@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Pressable, View } from 'react-native';
+import { Modal, Pressable, Text, View } from 'react-native';
 
 import {
   BigStat,
@@ -20,7 +20,7 @@ import { useStore } from '../context/StoreContext';
 import { useTheme } from '../context/ThemeContext';
 import { caloriesFromMacros, recommendedWaterMl } from '../lib/biometrics';
 import { uid } from '../lib/defaults';
-import { computeDayTotals, computeFoodTotals, computeMealTotals, MICRO_FIELDS, parseOffProduct } from '../lib/nutrition';
+import { computeDayTotals, computeFoodTotals, computeMealTotals, MICRO_FIELDS, parseOffProduct, QUANTITY_UNITS, getQuantityUnit, quantityToGrams } from '../lib/nutrition';
 import * as api from '../api/client';
 
 import { formatLocalDate, todayLocal as todayISO } from '../lib/date';
@@ -475,8 +475,11 @@ function FoodSearchCard({ onAdd, onSaveCustomFood }) {
   const [results, setResults] = useState([]);
   const [status, setStatus] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const [picked, setPicked] = useState(null);
-  const [grams, setGrams] = useState('100');
+  const [amount, setAmount] = useState('1');
+  const [unitKey, setUnitKey] = useState('unidade');
+  const [gramsPerUnit, setGramsPerUnit] = useState('100');
   const [saved, setSaved] = useState(false);
 
   async function search() {
@@ -491,7 +494,7 @@ function FoodSearchCard({ onAdd, onSaveCustomFood }) {
         .map((h) => h._source || h)
         .filter((p) => p.product_name && p.nutriments?.['energy-kcal_100g'] != null)
         .map(parseOffProduct)
-        .slice(0, 10);
+        .slice(0, 30);
       setResults(parsed);
       if (!parsed.length) setStatus('Sem resultados. Tenta outro termo.');
     } catch (e) {
@@ -501,53 +504,63 @@ function FoodSearchCard({ onAdd, onSaveCustomFood }) {
     }
   }
 
-  const preview = picked ? computeFoodTotals(picked, parseFloat(grams) || 0) : null;
+  function pick(food) {
+    setPicked(food);
+    setSaved(false);
+    setAmount('1');
+    setUnitKey('unidade');
+    setGramsPerUnit('100');
+    setSearchOpen(false);
+  }
+
+  const grams =
+    unitKey === 'g'
+      ? parseFloat(amount) || 0
+      : quantityToGrams(parseFloat(amount) || 0, unitKey, parseFloat(gramsPerUnit) || 0);
+  const preview = picked ? computeFoodTotals(picked, grams) : null;
 
   return (
     <Card>
       <CardTitle>Pesquisar alimento</CardTitle>
-      <View style={{ flexDirection: 'row', gap: 8 }}>
-        <Input
-          value={query}
-          onChangeText={setQuery}
-          placeholder="Ex: iogurte natural"
-          style={{ flex: 1 }}
-        />
-        <Button title="Ir" variant="ghost" onPress={search} loading={loading} />
-      </View>
-
-      {status ? <Note style={{ marginTop: 8 }}>{status}</Note> : null}
-
-      {results.map((r, i) => (
-        <Pressable
-          key={i}
-          onPress={() => {
-            setPicked(r);
-            setSaved(false);
-          }}
-          style={{
-            paddingVertical: 9,
-            borderTopWidth: 1,
-            borderTopColor: theme.colors.bgSoft,
-          }}
-        >
-          <Body>{r.name}</Body>
-          <Note>
-            {r.brand ? `${r.brand} · ` : ''}
-            {r.calories} kcal · P:{r.protein}g H:{r.carbs}g G:{r.fat}g /100g
-          </Note>
-        </Pressable>
-      ))}
+      <Button title="🔍 Pesquisar na Open Food Facts" variant="ghost" onPress={() => setSearchOpen(true)} />
 
       {picked ? (
         <View style={{ marginTop: 12, borderTopWidth: 1, borderTopColor: theme.colors.border, paddingTop: 12 }}>
           <Body style={{ fontFamily: theme.font.bodyBold }}>{picked.name}</Body>
-          <Field label="Quantidade (g)">
-            <Input value={grams} onChangeText={setGrams} keyboardType="number-pad" />
-          </Field>
+
+          <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
+            <Field label="Quantidade" flex>
+              <Input value={amount} onChangeText={setAmount} keyboardType="decimal-pad" />
+            </Field>
+            <Field label="Unidade" flex>
+              <Pressable
+                onPress={() => {
+                  const idx = QUANTITY_UNITS.findIndex((u) => u.key === unitKey);
+                  const next = QUANTITY_UNITS[(idx + 1) % QUANTITY_UNITS.length];
+                  setUnitKey(next.key);
+                  setGramsPerUnit(String(next.gramsPerUnit));
+                }}
+                style={{
+                  borderWidth: 1.5,
+                  borderColor: theme.colors.border,
+                  borderRadius: theme.radiusSm,
+                  padding: 12,
+                }}
+              >
+                <Body>{getQuantityUnit(unitKey).label}</Body>
+              </Pressable>
+            </Field>
+          </View>
+
+          {unitKey !== 'g' ? (
+            <Field label={`Gramas por ${getQuantityUnit(unitKey).label}`} hint="Ajusta se souberes o peso real (ex: uma maçã pequena pode ser 60g em vez de 100g).">
+              <Input value={gramsPerUnit} onChangeText={setGramsPerUnit} keyboardType="decimal-pad" />
+            </Field>
+          ) : null}
+
           {preview ? (
             <Note style={{ marginBottom: 10 }}>
-              ≈ {preview.calories} kcal · P:{preview.protein}g H:{preview.carbs}g G:{preview.fat}g
+              {grams}g ≈ {preview.calories} kcal · P:{preview.protein}g H:{preview.carbs}g G:{preview.fat}g
             </Note>
           ) : null}
           <Button
@@ -556,8 +569,6 @@ function FoodSearchCard({ onAdd, onSaveCustomFood }) {
             onPress={() => {
               onAdd({ name: picked.name, ...preview });
               setPicked(null);
-              setResults([]);
-              setQuery('');
             }}
           />
           <Button
@@ -572,6 +583,59 @@ function FoodSearchCard({ onAdd, onSaveCustomFood }) {
           />
         </View>
       ) : null}
+
+      <Modal visible={searchOpen} animationType="slide" transparent onRequestClose={() => setSearchOpen(false)}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' }}>
+          <View
+            style={{
+              backgroundColor: theme.colors.surface,
+              borderTopLeftRadius: 20,
+              borderTopRightRadius: 20,
+              maxHeight: '85%',
+              minHeight: '50%',
+            }}
+          >
+            <View style={{ padding: theme.spacing.lg, paddingBottom: 6 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                <Text style={{ fontFamily: theme.font.display, fontSize: 18, color: theme.colors.ink, textTransform: 'uppercase' }}>
+                  Pesquisar Alimento
+                </Text>
+                <Pressable onPress={() => setSearchOpen(false)}>
+                  <Text style={{ fontSize: 18, color: theme.colors.muted }}>✕</Text>
+                </Pressable>
+              </View>
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                <Input
+                  value={query}
+                  onChangeText={setQuery}
+                  placeholder="Ex: iogurte natural"
+                  autoFocus
+                  onSubmitEditing={search}
+                  style={{ flex: 1 }}
+                />
+                <Button title="Ir" variant="strength" onPress={search} loading={loading} />
+              </View>
+              {status ? <Note style={{ marginTop: 8 }}>{status}</Note> : null}
+            </View>
+
+            <Screen scroll contentStyle={{ padding: theme.spacing.lg, paddingTop: 0 }}>
+              {results.map((r, i) => (
+                <Pressable
+                  key={i}
+                  onPress={() => pick(r)}
+                  style={{ paddingVertical: 9, borderTopWidth: i === 0 ? 0 : 1, borderTopColor: theme.colors.bgSoft }}
+                >
+                  <Body>{r.name}</Body>
+                  <Note>
+                    {r.brand ? `${r.brand} · ` : ''}
+                    {r.calories} kcal · P:{r.protein}g H:{r.carbs}g G:{r.fat}g /100g
+                  </Note>
+                </Pressable>
+              ))}
+            </Screen>
+          </View>
+        </View>
+      </Modal>
     </Card>
   );
 }

@@ -13,6 +13,27 @@ export const MICRO_FIELDS = [
   { key: 'sodium', label: 'Sódio', unit: 'g' },
 ];
 
+// Nem sempre é fácil pesar um alimento — às vezes é mais natural dizer
+// "1 unidade" ou "2 fatias" do que "60g". O valor de "gramsPerUnit" é só um
+// ponto de partida (o utilizador pode sempre ajustá-lo antes de adicionar).
+export const QUANTITY_UNITS = [
+  { key: 'g', label: 'gramas', gramsPerUnit: 1 },
+  { key: 'unidade', label: 'unidade(s)', gramsPerUnit: 100 },
+  { key: 'fatia', label: 'fatia(s)', gramsPerUnit: 30 },
+  { key: 'colher_sopa', label: 'colher(es) de sopa', gramsPerUnit: 15 },
+  { key: 'chavena', label: 'chávena(s)', gramsPerUnit: 240 },
+];
+
+export function getQuantityUnit(key) {
+  return QUANTITY_UNITS.find((u) => u.key === key) || QUANTITY_UNITS[0];
+}
+
+/** Converte uma quantidade numa unidade (ex: 2 "unidade") para gramas. */
+export function quantityToGrams(amount, unitKey, gramsPerUnit) {
+  const perUnit = gramsPerUnit != null ? gramsPerUnit : getQuantityUnit(unitKey).gramsPerUnit;
+  return (amount || 0) * perUnit;
+}
+
 const MACRO_KEYS = ['protein', 'carbs', 'fat'];
 const ALL_NUTRIENT_KEYS = [...MACRO_KEYS, ...MICRO_FIELDS.map((m) => m.key)];
 

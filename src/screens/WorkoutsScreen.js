@@ -48,6 +48,7 @@ export default function WorkoutsScreen({ navigation }) {
   const todayKey = weekdayKeyFor(new Date());
   const scheduledId = data.weeklySchedule?.[todayKey];
   const scheduled = data.workouts.find((w) => w.id === scheduledId);
+  const hasAnyScheduleConfigured = Object.values(data.weeklySchedule || {}).some(Boolean);
   const todayStr = todayLocal();
   const alreadyDone =
     scheduled &&
@@ -92,6 +93,11 @@ export default function WorkoutsScreen({ navigation }) {
               />
             </>
           )}
+        </Card>
+      ) : hasAnyScheduleConfigured ? (
+        <Card accent={theme.colors.info}>
+          <CardTitle>Plano de hoje ({WEEKDAY_LABELS[todayKey]})</CardTitle>
+          <Note>😴 Hoje é dia de descanso no teu plano semanal.</Note>
         </Card>
       ) : null}
 

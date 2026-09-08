@@ -83,7 +83,22 @@ export default function WorkoutBuilderScreen({ route, navigation }) {
     if (exercises.some((ex) => !ex.name.trim()))
       return setError('Todos os exercícios precisam de nome.');
 
-    const workout = { id: editingId || uid(), name: name.trim(), exercises };
+    // Os campos numéricos podem ter ficado como texto solto durante a
+    // edição (para não forçar um mínimo a cada tecla) — só aqui, no fim,
+    // é que se convertem e se garante um mínimo de 1.
+    const cleanExercises = exercises.map((ex) => {
+      const clean = { ...ex };
+      clean.sets = Math.max(1, num(ex.sets) || 1);
+      if (ex.type === 'strength') {
+        clean.minReps = Math.max(1, num(ex.minReps) || 1);
+        clean.maxReps = Math.max(1, num(ex.maxReps) || 1);
+      } else {
+        clean.duration = Math.max(1, num(ex.duration) || 1);
+      }
+      return clean;
+    });
+
+    const workout = { id: editingId || uid(), name: name.trim(), exercises: cleanExercises };
     updateData((prev) => ({
       ...prev,
       workouts: editingId
@@ -164,21 +179,21 @@ export default function WorkoutBuilderScreen({ route, navigation }) {
                 <Field label="Séries" flex>
                   <Input
                     value={String(ex.sets)}
-                    onChangeText={(v) => patch(i, { sets: num(v) || 1 })}
+                    onChangeText={(v) => patch(i, { sets: v })}
                     keyboardType="number-pad"
                   />
                 </Field>
                 <Field label="Reps mín" flex>
                   <Input
                     value={String(ex.minReps)}
-                    onChangeText={(v) => patch(i, { minReps: num(v) || 1 })}
+                    onChangeText={(v) => patch(i, { minReps: v })}
                     keyboardType="number-pad"
                   />
                 </Field>
                 <Field label="Reps máx" flex>
                   <Input
                     value={String(ex.maxReps)}
-                    onChangeText={(v) => patch(i, { maxReps: num(v) || 1 })}
+                    onChangeText={(v) => patch(i, { maxReps: v })}
                     keyboardType="number-pad"
                   />
                 </Field>
@@ -197,14 +212,14 @@ export default function WorkoutBuilderScreen({ route, navigation }) {
                 <Field label="Séries" flex>
                   <Input
                     value={String(ex.sets)}
-                    onChangeText={(v) => patch(i, { sets: num(v) || 1 })}
+                    onChangeText={(v) => patch(i, { sets: v })}
                     keyboardType="number-pad"
                   />
                 </Field>
                 <Field label="Duração (min)" flex>
                   <Input
                     value={String(ex.duration)}
-                    onChangeText={(v) => patch(i, { duration: num(v) || 1 })}
+                    onChangeText={(v) => patch(i, { duration: v })}
                     keyboardType="number-pad"
                   />
                 </Field>

@@ -373,6 +373,7 @@ function ProfileForm({ profile, currentWeight, onSave, onCancel }) {
 /** Histórico de todos os objetivos de exercício, cumpridos ou não. */
 function GoalHistoryCard({ goals, loggedWorkouts }) {
   const theme = useTheme();
+  const [open, setOpen] = useState(false);
   if (!goals.length) return null;
 
   const evaluated = evaluateAllGoals(goals, loggedWorkouts).sort(
@@ -385,33 +386,47 @@ function GoalHistoryCard({ goals, loggedWorkouts }) {
     pending: { label: '⏳ Em curso', color: theme.colors.info },
   };
 
+  const achievedCount = evaluated.filter((g) => g.status === 'achieved').length;
+
   return (
     <Card>
-      <CardTitle>Histórico de Objetivos</CardTitle>
-      {evaluated.map((g, i) => {
-        const st = STATUS[g.status];
-        return (
-          <View
-            key={g.id}
-            style={{
-              paddingVertical: 9,
-              borderTopWidth: i === 0 ? 0 : 1,
-              borderTopColor: theme.colors.bgSoft,
-            }}
-          >
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-              <Body style={{ fontFamily: theme.font.bodyBold }}>
-                {g.exerciseName} — {g.targetWeight} kg
-              </Body>
-              <Note color={st.color}>{st.label}</Note>
-            </View>
-            <Note>
-              {g.targetDate ? `Prazo: ${g.targetDate}` : 'Sem prazo definido'}
-              {g.achievedDate ? ` · Atingido a ${g.achievedDate}` : ''}
-            </Note>
-          </View>
-        );
-      })}
+      <Pressable
+        onPress={() => setOpen((o) => !o)}
+        style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}
+      >
+        <CardTitle>Histórico de Objetivos</CardTitle>
+        <Text style={{ color: theme.colors.muted, fontSize: 12 }}>{open ? '▴' : '▾'}</Text>
+      </Pressable>
+      <Note style={{ marginTop: open ? 0 : -6, marginBottom: open ? 10 : 0 }}>
+        {evaluated.length} objetivo(s) · {achievedCount} cumprido(s)
+      </Note>
+
+      {open
+        ? evaluated.map((g, i) => {
+            const st = STATUS[g.status];
+            return (
+              <View
+                key={g.id}
+                style={{
+                  paddingVertical: 9,
+                  borderTopWidth: i === 0 ? 0 : 1,
+                  borderTopColor: theme.colors.bgSoft,
+                }}
+              >
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                  <Body style={{ fontFamily: theme.font.bodyBold }}>
+                    {g.exerciseName} — {g.targetWeight} kg
+                  </Body>
+                  <Note color={st.color}>{st.label}</Note>
+                </View>
+                <Note>
+                  {g.targetDate ? `Prazo: ${g.targetDate}` : 'Sem prazo definido'}
+                  {g.achievedDate ? ` · Atingido a ${g.achievedDate}` : ''}
+                </Note>
+              </View>
+            );
+          })
+        : null}
     </Card>
   );
 }
