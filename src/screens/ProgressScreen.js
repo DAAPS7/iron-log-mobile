@@ -56,7 +56,18 @@ function buildSeries(data, key) {
     const points = [...data.weightHistory]
       .sort((a, b) => new Date(a.date) - new Date(b.date))
       .map((w) => ({ date: w.date, value: w.weight, detail: `${w.weight} kg` }));
-    return { points, higherIsBetter: false, unitNote: 'Eixo vertical: peso corporal (kg).' };
+
+    // Sem objetivo definido, assume-se o caso mais comum (perder/manter).
+    // Com objetivo definido, usa-se a direção real: se a meta é mais alta
+    // que o peso atual, subir é que é a melhoria.
+    const weightGoal = data.metricGoals?.weight;
+    let higherIsBetter = false;
+    if (weightGoal?.target != null && points.length) {
+      const currentWeight = points[points.length - 1].value;
+      higherIsBetter = weightGoal.target > currentWeight;
+    }
+
+    return { points, higherIsBetter, unitNote: 'Eixo vertical: peso corporal (kg).' };
   }
 
   const [type, name] = key.split('::');

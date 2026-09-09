@@ -17,6 +17,11 @@ const MERGE_ARRAYS_BY_ID = [
 ];
 const MERGE_ARRAYS_BY_DATE = ['weightHistory'];
 const MERGE_BEST_WEIGHT_OBJECTS = ['exercisePRs', 'prNotifyCache'];
+const MERGE_SHALLOW_OBJECTS = ['metricGoals', 'macroGoals', 'weeklySchedule'];
+
+function mergeShallowObject(oldObj, newObj) {
+  return { ...(oldObj || {}), ...(newObj || {}) };
+}
 
 function mergeArrayByKey(oldArr, newArr, keyField) {
   const map = new Map();
@@ -63,6 +68,9 @@ export function mergeUserData(oldData, newData) {
   });
   MERGE_BEST_WEIGHT_OBJECTS.forEach((key) => {
     merged[key] = mergeBestWeightObject(oldData[key], newData[key]);
+  });
+  MERGE_SHALLOW_OBJECTS.forEach((key) => {
+    merged[key] = mergeShallowObject(oldData[key], newData[key]);
   });
   return merged;
 }

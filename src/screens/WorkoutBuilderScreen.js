@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import {
@@ -17,6 +17,13 @@ import { useTheme } from '../context/ThemeContext';
 import { uid } from '../lib/defaults';
 import { STRENGTH_EXERCISES } from '../lib/exercises';
 import { DISTANCE_UNITS } from '../lib/sets';
+import {
+  recommendWarmupSets,
+  estimateWorkoutTime,
+  formatDuration,
+  getGeneralTimeTips,
+  getWorkoutSpecificTips,
+} from '../lib/timeManagement';
 
 /** Cria um exercício novo com valores por omissão sensatos. */
 function blankExercise(type) {
@@ -268,6 +275,8 @@ export default function WorkoutBuilderScreen({ route, navigation }) {
         </Card>
       ))}
 
+      <TimeManagementCard exercises={exercises} />
+
       <View style={{ flexDirection: 'row', gap: 8, marginBottom: theme.spacing.md }}>
         <Button
           title="+ Força"
@@ -385,5 +394,76 @@ function ExercisePicker({ value, onChange }) {
         </View>
       ) : null}
     </View>
+  );
+}
+
+/** Estimativa de duração + recomendação de aquecimento + dicas para o treino a ser montado. */
+function TimeManagementCard({ exercises }) {
+  const theme = useTheme();
+  const [tipsOpen, setTipsOpen] = useState(false);
+
+  const workout = useMemo(() => ({ exercises }), [exercises]);
+  const { totalSeconds, breakdown } = useMemo(() => estimateWorkoutTime(workout), [workout]);
+  const specificTips = useMemo(() => getWorkoutSpecificTips(workout), [workout]);
+  const generalTips = useMemo(() => getGeneralTimeTips(), []);
+
+  if (!exercises.length) return null;
+
+  return (
+    <Card accent={theme.colors.gold}>
+      <CardTitle>⏱️ Gestão de Tempo</CardTitle>
+      <Body style={{ fontFamily: theme.font.display, fontSize: 22, color: theme.colors.gold, marginBottom: 8 }}>
+        ≈ {formatDuration(totalSeconds)}
+      </Body>
+      <Note style={{ marginBottom: 10 }}>
+        Assume 2-3min de descanso entre séries de trabalho, aquecimento mais
+        curto, e uma margem para trocar de exercício. Os exercícios sem
+        aquecimento definido manualmente usam a recomendação abaixo.
+      </Note>
+
+      {breakdown.map((b, i) => (
+        <View
+          key={i}
+          style={{
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            paddingVertical: 6,
+            borderTopWidth: i === 0 ? 0 : 1,
+            borderTopColor: theme.colors.bgSoft,
+          }}
+        >
+          <Note>
+            {b.name}
+            {b.warmupSets ? ` (+${b.warmupSets} aquecimento sugerido)` : ''}
+          </Note>
+          <Note>{formatDuration(b.seconds)}</Note>
+        </View>
+      ))}
+
+      {specificTips.length || generalTips.length ? (
+        <Pressable
+          onPress={() => setTipsOpen((o) => !o)}
+          style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 }}
+        >
+          <Note color={theme.colors.ink}>💡 Dicas para poupar tempo</Note>
+          <Text style={{ color: theme.colors.muted }}>{tipsOpen ? '▴' : '▾'}</Text>
+        </Pressable>
+      ) : null}
+
+      {tipsOpen ? (
+        <View style={{ marginTop: 8 }}>
+          {specificTips.map((t, i) => (
+            <Note key={`s${i}`} style={{ marginBottom: 6 }} color={theme.colors.info}>
+              • {t}
+            </Note>
+          ))}
+          {generalTips.map((t, i) => (
+            <Note key={`g${i}`} style={{ marginBottom: 6 }}>
+              • {t}
+            </Note>
+          ))}
+        </View>
+      ) : null}
+    </Card>
   );
 }

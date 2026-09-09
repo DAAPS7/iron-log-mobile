@@ -267,6 +267,14 @@ export default function LogSessionScreen({ route, navigation }) {
 
   return (
     <Screen>
+      {!session.editingLogId ? (
+        <Note style={{ marginBottom: 12 }}>
+          💾 O progresso vai sendo guardado como rascunho no telemóvel (para
+          não se perder se a app fechar a meio), mas só fica registado a
+          sério quando premires "Concluir treino".
+        </Note>
+      ) : null}
+
       {isFree || (!workout && !session.editingLogId) ? (
         <Field label="Nome do treino">
           <Input

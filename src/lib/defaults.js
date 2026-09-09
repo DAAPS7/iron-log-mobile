@@ -49,9 +49,23 @@ export function defaultSettings() {
   };
 }
 
-/** Junta os dados vindos do servidor com a forma esperada pela app. */
+/**
+ * Junta os dados vindos do servidor com a forma esperada pela app.
+ *
+ * Isto não pode ser uma fusão só de nível de topo: alguns campos são
+ * objetos aninhados (ex: metricGoals tem bodyFat/weight lá dentro). Se os
+ * dados guardados tiverem, por exemplo, só "metricGoals.bodyFat" (de uma
+ * altura em que "weight" ainda não existia), uma fusão superficial
+ * substituía o objeto metricGoals inteiro, apagando o valor por omissão de
+ * "weight" — fazendo uma meta de peso já definida parecer que nunca
+ * existiu.
+ */
 export function mergeData(incoming) {
-  return { ...defaultData(), ...(incoming || {}) };
+  const merged = { ...defaultData(), ...(incoming || {}) };
+  merged.metricGoals = { ...defaultData().metricGoals, ...(incoming?.metricGoals || {}) };
+  merged.macroGoals = { ...defaultData().macroGoals, ...(incoming?.macroGoals || {}) };
+  merged.weeklySchedule = { ...defaultData().weeklySchedule, ...(incoming?.weeklySchedule || {}) };
+  return merged;
 }
 
 export function mergeSettings(incoming) {

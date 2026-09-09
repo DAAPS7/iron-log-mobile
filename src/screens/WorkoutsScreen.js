@@ -18,6 +18,7 @@ import { useTheme } from '../context/ThemeContext';
 import { todayLocal } from '../lib/date';
 import { formatMinSec } from '../lib/sets';
 import { evaluateWeeklyReview, weekdayKeyFor, WEEKDAY_LABELS } from '../lib/schedule';
+import { estimateWorkoutTime, formatDuration } from '../lib/timeManagement';
 import { confirmAsync, notify } from '../lib/confirm';
 
 export default function WorkoutsScreen({ navigation }) {
@@ -130,7 +131,7 @@ export default function WorkoutsScreen({ navigation }) {
           <Card key={w.id}>
             <CardTitle>{w.name}</CardTitle>
             <Note style={{ marginBottom: 8 }}>
-              {w.exercises.length} exercício(s)
+              {w.exercises.length} exercício(s) · ≈{formatDuration(estimateWorkoutTime(w).totalSeconds)}
             </Note>
 
             {w.exercises.map((ex, i) => {
