@@ -348,15 +348,14 @@ function ExerciseLogger({ exercise: ex, onAddSet, onRemoveSet, onRemove }) {
   const [warmup, setWarmup] = useState(false);
 
   const warmupPrefix = ex.targetWarmupSets ? `${ex.targetWarmupSets}+` : '';
-  const target = isStrength
-    ? ex.minReps != null
-      ? `Alvo: ${warmupPrefix}${ex.targetSets ?? '?'}x(${ex.minReps}-${ex.maxReps} reps)`
-      : 'Exercício extra'
-    : ex.duration != null
-      ? `Alvo: ${warmupPrefix}${ex.targetSets ?? '?'}x${formatMinSec(ex.duration)}${
+  const hasTarget = ex.targetSets != null;
+  const target = !hasTarget
+    ? 'Exercício extra'
+    : isStrength
+      ? `Alvo: ${warmupPrefix}${ex.targetSets}x(${ex.minReps}-${ex.maxReps} reps)`
+      : `Alvo: ${warmupPrefix}${ex.targetSets}x${ex.duration != null ? formatMinSec(ex.duration) : 'duração livre'}${
           ex.targetDistance ? ` · ${ex.targetDistance}${ex.targetDistanceUnit}` : ''
-        }`
-      : 'Exercício extra';
+        }`;
 
   const workingCount = ex.sets.filter((s) => !isWarmupSet(s)).length;
   const warmupCount = ex.sets.length - workingCount;

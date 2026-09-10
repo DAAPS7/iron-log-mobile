@@ -101,10 +101,9 @@ export function formatDuration(totalSeconds) {
 /** Dicas gerais, sempre relevantes, para tornar qualquer treino mais rápido. */
 export function getGeneralTimeTips() {
   return [
+    'Descansa sempre 2-3 minutos entre séries de trabalho — é o intervalo assumido nas estimativas desta app.',
     'Prepara os pesos/equipamento do próximo exercício enquanto descansas do atual.',
-    'Faz supersets entre grupos musculares opostos (ex: peito + costas) para descansar um lado enquanto trabalhas o outro.',
     'Usa um cronómetro para o descanso — sem ele, é fácil descansar mais do que precisas sem dar por isso.',
-    'Reduz o descanso para 60-90s em exercícios de isolamento (bicep curl, extensões) — só os compostos pesados (agachamento, levantamento terra) precisam de 2-3min completos.',
     'Chega ao ginásio já com a roupa e os auscultadores prontos — perdas de tempo antes de começar também contam.',
   ];
 }
@@ -140,25 +139,6 @@ export function getWorkoutSpecificTips(workout) {
       }
     }
   });
-
-  // Grupos musculares opostos consecutivos são bons candidatos a superset.
-  const OPPOSITES = {
-    Chest: 'Back',
-    Back: 'Chest',
-    Biceps: 'Triceps',
-    Triceps: 'Biceps',
-    Quads: 'Hamstrings',
-    Hamstrings: 'Quads',
-  };
-  for (let i = 0; i < workout.exercises.length - 1; i++) {
-    const a = workout.exercises[i];
-    const b = workout.exercises[i + 1];
-    if (a.muscle && b.muscle && OPPOSITES[a.muscle] === b.muscle) {
-      tips.push(
-        `"${a.name}" e "${b.name}" trabalham grupos opostos — bons candidatos a superset (alterna entre os dois sem descansar no meio).`,
-      );
-    }
-  }
 
   // Muitas séries de aquecimento recomendadas ao todo — vale a pena rever.
   const alreadyWorked = new Set();

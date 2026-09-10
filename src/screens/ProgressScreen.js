@@ -20,6 +20,7 @@ import { useStore } from '../context/StoreContext';
 import { useTheme } from '../context/ThemeContext';
 import { uid } from '../lib/defaults';
 import { evaluateAllGoals } from '../lib/goals';
+import { confirmAsync } from '../lib/confirm';
 import {
   computeBestFromSessions,
   getEffectivePR,
@@ -284,16 +285,38 @@ export default function ProgressScreen() {
                 borderTopColor: theme.colors.bgSoft,
               }}
             >
-              <Body style={{ fontFamily: theme.font.bodyBold }}>
-                {new Date(`${p.date}T00:00:00`).toLocaleDateString('pt-PT')}
-              </Body>
-              <Note>{p.detail}</Note>
-              {diff ? (
-                <Note color={diffColor}>
-                  {diff > 0 ? '+' : ''}
-                  {diff} desde o registo anterior
-                </Note>
-              ) : null}
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <View style={{ flex: 1 }}>
+                  <Body style={{ fontFamily: theme.font.bodyBold }}>
+                    {new Date(`${p.date}T00:00:00`).toLocaleDateString('pt-PT')}
+                  </Body>
+                  <Note>{p.detail}</Note>
+                  {diff ? (
+                    <Note color={diffColor}>
+                      {diff > 0 ? '+' : ''}
+                      {diff} desde o registo anterior
+                    </Note>
+                  ) : null}
+                </View>
+                {activeKey === WEIGHT_KEY ? (
+                  <Pressable
+                    onPress={async () => {
+                      const ok = await confirmAsync(
+                        'Apagar registo',
+                        `Queres mesmo apagar o registo de peso de ${new Date(`${p.date}T00:00:00`).toLocaleDateString('pt-PT')}?`,
+                        'Apagar',
+                      );
+                      if (!ok) return;
+                      updateData((prev) => ({
+                        ...prev,
+                        weightHistory: prev.weightHistory.filter((w) => w.date !== p.date),
+                      }));
+                    }}
+                  >
+                    <Text style={{ color: theme.colors.danger, fontSize: 16 }}>✕</Text>
+                  </Pressable>
+                ) : null}
+              </View>
             </View>
           );
         })}

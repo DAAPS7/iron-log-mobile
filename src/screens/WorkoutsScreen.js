@@ -139,7 +139,7 @@ export default function WorkoutsScreen({ navigation }) {
               const detail =
                 ex.type === 'strength'
                   ? `${warmup}${ex.sets}x(${ex.minReps}-${ex.maxReps})`
-                  : `${warmup}${ex.sets}x${formatMinSec(ex.duration)}${
+                  : `${warmup}${ex.sets}x${ex.duration != null ? formatMinSec(ex.duration) : 'duração livre'}${
                       ex.distance ? ` · ${ex.distance}${ex.distanceUnit || 'km'}` : ''
                     }`;
               return (

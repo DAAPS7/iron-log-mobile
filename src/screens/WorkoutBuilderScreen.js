@@ -100,7 +100,11 @@ export default function WorkoutBuilderScreen({ route, navigation }) {
         clean.minReps = Math.max(1, num(ex.minReps) || 1);
         clean.maxReps = Math.max(1, num(ex.maxReps) || 1);
       } else {
-        clean.duration = Math.max(1, num(ex.duration) || 1);
+        // Duração é opcional — às vezes não sabes de antemão quanto tempo
+        // vais correr/pedalar. Fica null se deixares em branco; a
+        // estimativa de tempo assume um valor de referência nesse caso.
+        const d = num(ex.duration);
+        clean.duration = d && d > 0 ? d : null;
       }
       return clean;
     });
@@ -225,7 +229,7 @@ export default function WorkoutBuilderScreen({ route, navigation }) {
                 </Field>
                 <Field label="Duração (min)" flex>
                   <Input
-                    value={String(ex.duration)}
+                    value={ex.duration == null ? '' : String(ex.duration)}
                     onChangeText={(v) => patch(i, { duration: v })}
                     keyboardType="number-pad"
                   />
