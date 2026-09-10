@@ -18,7 +18,7 @@ import {
 } from '../components/ui';
 import { useStore } from '../context/StoreContext';
 import { useTheme } from '../context/ThemeContext';
-import { uid } from '../lib/defaults';
+import { uid, markDeleted } from '../lib/defaults';
 import { evaluateAllGoals } from '../lib/goals';
 import { confirmAsync } from '../lib/confirm';
 import {
@@ -259,6 +259,7 @@ export default function ProgressScreen() {
             updateData((prev) => ({
               ...prev,
               exerciseGoals: (prev.exerciseGoals || []).filter((g) => g.id !== id),
+              deletedIds: markDeleted(prev, 'exerciseGoals', id),
             }))
           }
         />
@@ -310,6 +311,7 @@ export default function ProgressScreen() {
                       updateData((prev) => ({
                         ...prev,
                         weightHistory: prev.weightHistory.filter((w) => w.date !== p.date),
+                        deletedIds: markDeleted(prev, 'weightHistory', p.date),
                       }));
                     }}
                   >

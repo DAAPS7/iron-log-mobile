@@ -20,6 +20,7 @@ import { formatMinSec } from '../lib/sets';
 import { evaluateWeeklyReview, weekdayKeyFor, WEEKDAY_LABELS } from '../lib/schedule';
 import { estimateWorkoutTime, formatDuration } from '../lib/timeManagement';
 import { confirmAsync, notify } from '../lib/confirm';
+import { markDeleted } from '../lib/defaults';
 
 export default function WorkoutsScreen({ navigation }) {
   const theme = useTheme();
@@ -63,6 +64,7 @@ export default function WorkoutsScreen({ navigation }) {
     updateData((prev) => ({
       ...prev,
       workouts: prev.workouts.filter((w) => w.id !== id),
+      deletedIds: markDeleted(prev, 'workouts', id),
     }));
   }
 

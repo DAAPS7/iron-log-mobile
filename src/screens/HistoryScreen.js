@@ -5,6 +5,7 @@ import { Body, Button, Card, EmptyState, Note, Screen, ScreenTitle } from '../co
 import { useStore } from '../context/StoreContext';
 import { useTheme } from '../context/ThemeContext';
 import { confirmAsync } from '../lib/confirm';
+import { markDeleted } from '../lib/defaults';
 
 function formatDate(dateStr) {
   return new Date(`${dateStr}T00:00:00`).toLocaleDateString('pt-PT', {
@@ -57,6 +58,7 @@ export default function HistoryScreen({ navigation }) {
     updateData((prev) => ({
       ...prev,
       loggedWorkouts: prev.loggedWorkouts.filter((lw) => lw.id !== id),
+      deletedIds: markDeleted(prev, 'loggedWorkouts', id),
     }));
   }
 

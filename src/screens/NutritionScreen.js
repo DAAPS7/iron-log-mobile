@@ -19,7 +19,7 @@ import { confirmAsync } from '../lib/confirm';
 import { useStore } from '../context/StoreContext';
 import { useTheme } from '../context/ThemeContext';
 import { caloriesFromMacros, recommendedWaterMl } from '../lib/biometrics';
-import { uid } from '../lib/defaults';
+import { uid, markDeleted } from '../lib/defaults';
 import { computeDayTotals, computeFoodTotals, computeMealTotals, MICRO_FIELDS, parseOffProduct, QUANTITY_UNITS, getQuantityUnit, quantityToGrams } from '../lib/nutrition';
 import * as api from '../api/client';
 
@@ -65,10 +65,18 @@ export default function NutritionScreen() {
   }
 
   function resetWaterDay() {
-    updateData((prev) => ({
-      ...prev,
-      waterEntries: (prev.waterEntries || []).filter((w) => w.date !== date),
-    }));
+    updateData((prev) => {
+      const toRemove = (prev.waterEntries || []).filter((w) => w.date === date);
+      let deletedIds = prev.deletedIds;
+      toRemove.forEach((w) => {
+        deletedIds = markDeleted({ ...prev, deletedIds }, 'waterEntries', w.id);
+      });
+      return {
+        ...prev,
+        waterEntries: (prev.waterEntries || []).filter((w) => w.date !== date),
+        deletedIds,
+      };
+    });
   }
 
   function shiftDate(delta) {
@@ -88,6 +96,7 @@ export default function NutritionScreen() {
     updateData((prev) => ({
       ...prev,
       calorieEntries: prev.calorieEntries.filter((e) => e.id !== id),
+      deletedIds: markDeleted(prev, 'calorieEntries', id),
     }));
   }
 
@@ -102,6 +111,7 @@ export default function NutritionScreen() {
     updateData((prev) => ({
       ...prev,
       customFoods: (prev.customFoods || []).filter((f) => f.id !== id),
+      deletedIds: markDeleted(prev, 'customFoods', id),
     }));
   }
 
@@ -142,6 +152,7 @@ export default function NutritionScreen() {
     updateData((prev) => ({
       ...prev,
       mealPlans: (prev.mealPlans || []).filter((p) => p.id !== id),
+      deletedIds: markDeleted(prev, 'mealPlans', id),
     }));
   }
 

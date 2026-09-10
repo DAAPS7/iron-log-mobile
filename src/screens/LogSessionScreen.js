@@ -16,7 +16,7 @@ import {
 import { useStore } from '../context/StoreContext';
 import { useTheme } from '../context/ThemeContext';
 import { todayLocal } from '../lib/date';
-import { uid } from '../lib/defaults';
+import { uid, markDeleted } from '../lib/defaults';
 import { confirmAsync, notify } from '../lib/confirm';
 import {
   DISTANCE_UNITS,
@@ -261,6 +261,7 @@ export default function LogSessionScreen({ route, navigation }) {
       loggedWorkouts: prev.loggedWorkouts.filter(
         (lw) => lw.id !== session.editingLogId,
       ),
+      deletedIds: markDeleted(prev, 'loggedWorkouts', session.editingLogId),
     }));
     navigation.goBack();
   }

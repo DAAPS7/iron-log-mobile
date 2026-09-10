@@ -35,6 +35,21 @@ export function defaultData() {
       sun: null,
     },
     lastWeeklyReviewWeek: null,
+    // Marcas de eliminação — quando apagas um item de uma lista que é
+    // fundida entre dispositivos (ver mergeUserData no servidor), fica
+    // aqui registado que aquele id/data foi mesmo apagado de propósito.
+    // Sem isto, a próxima gravação trazia o item de volta, porque a fusão
+    // não tinha forma de distinguir "nunca vi isto" de "isto foi apagado".
+    deletedIds: {
+      loggedWorkouts: [],
+      workouts: [],
+      calorieEntries: [],
+      waterEntries: [],
+      customFoods: [],
+      mealPlans: [],
+      exerciseGoals: [],
+      weightHistory: [],
+    },
   };
 }
 
@@ -65,7 +80,24 @@ export function mergeData(incoming) {
   merged.metricGoals = { ...defaultData().metricGoals, ...(incoming?.metricGoals || {}) };
   merged.macroGoals = { ...defaultData().macroGoals, ...(incoming?.macroGoals || {}) };
   merged.weeklySchedule = { ...defaultData().weeklySchedule, ...(incoming?.weeklySchedule || {}) };
+  merged.deletedIds = { ...defaultData().deletedIds, ...(incoming?.deletedIds || {}) };
   return merged;
+}
+
+/**
+ * Marca um id (ou data, no caso do histórico de peso) como apagado numa
+ * lista específica. Usar sempre ao lado da remoção do item em si:
+ *
+ *   updateData((prev) => ({
+ *     ...prev,
+ *     calorieEntries: prev.calorieEntries.filter((e) => e.id !== id),
+ *     deletedIds: markDeleted(prev, 'calorieEntries', id),
+ *   }));
+ */
+export function markDeleted(prev, field, key) {
+  const current = prev.deletedIds?.[field] || [];
+  const next = current.includes(key) ? current : [...current, key];
+  return { ...prev.deletedIds, [field]: next };
 }
 
 export function mergeSettings(incoming) {
