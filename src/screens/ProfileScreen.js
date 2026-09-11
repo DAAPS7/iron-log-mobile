@@ -17,10 +17,12 @@ import {
 } from '../components/ui';
 import StatRing from '../components/StatRing';
 import MetricInsightModal from '../components/MetricInsightModal';
+import BodyMuscleMap from '../components/BodyMuscleMap';
 import { useStore } from '../context/StoreContext';
 import { useTheme } from '../context/ThemeContext';
 import { todayLocal } from '../lib/date';
 import { evaluateAllGoals } from '../lib/goals';
+import { computeMuscleRegionProgress } from '../lib/muscleProgress';
 import { bodyFatColor } from '../theme/theme';
 import {
   classifyBodyFat,
@@ -47,6 +49,10 @@ export default function ProfileScreen({ navigation }) {
   const weight = useMemo(
     () => getCurrentWeight(data?.weightHistory || []),
     [data?.weightHistory],
+  );
+  const muscleProgress = useMemo(
+    () => (data ? computeMuscleRegionProgress(data) : null),
+    [data],
   );
 
   if (!data) return null;
@@ -120,6 +126,16 @@ export default function ProfileScreen({ navigation }) {
             ) : (
               <Note style={{ textAlign: 'center' }}>Toca para veres insights e definires uma meta.</Note>
             )}
+          </Card>
+
+          <Card>
+            <CardTitle>Volume Muscular da Semana</CardTitle>
+            <Note style={{ marginBottom: 10 }}>
+              Cada zona fica mais intensa conforme completas as séries
+              planeadas para ela esta semana. Reinicia sozinho todas as
+              segundas-feiras.
+            </Note>
+            <BodyMuscleMap progress={muscleProgress} />
           </Card>
 
           <Card accent={theme.colors.info} onPress={() => setOpenMetric('bmr')}>

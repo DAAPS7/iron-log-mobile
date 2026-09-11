@@ -3,7 +3,6 @@ import { Pressable, Text, useWindowDimensions, View } from 'react-native';
 
 import LineChart from '../components/LineChart';
 import WeightChart from '../components/WeightChart';
-import BodyMuscleMap from '../components/BodyMuscleMap';
 import {
   Body,
   Button,
@@ -21,7 +20,6 @@ import { useStore } from '../context/StoreContext';
 import { useTheme } from '../context/ThemeContext';
 import { uid, markDeleted } from '../lib/defaults';
 import { evaluateAllGoals } from '../lib/goals';
-import { computeMuscleRegionProgress } from '../lib/muscleProgress';
 import { confirmAsync } from '../lib/confirm';
 import {
   computeBestFromSessions,
@@ -173,10 +171,6 @@ export default function ProgressScreen() {
     () => (data && activeKey ? buildSeries(data, activeKey) : null),
     [data, activeKey],
   );
-  const muscleProgress = useMemo(
-    () => (data ? computeMuscleRegionProgress(data) : null),
-    [data],
-  );
 
   if (!data) return null;
   if (!options.length) {
@@ -210,15 +204,6 @@ export default function ProgressScreen() {
       <ScreenTitle subtitle="Evolução do peso corporal e dos teus exercícios.">
         Progresso
       </ScreenTitle>
-
-      <Card>
-        <CardTitle>Volume Muscular da Semana</CardTitle>
-        <Note style={{ marginBottom: 10 }}>
-          Cada zona fica mais intensa conforme completas as séries planeadas
-          para ela esta semana. Reinicia sozinho todas as segundas-feiras.
-        </Note>
-        <BodyMuscleMap progress={muscleProgress} />
-      </Card>
 
       <Card>
         <CardTitle>Métrica</CardTitle>
