@@ -51,6 +51,18 @@ const REST_BETWEEN_WORKING_SETS = 150; // 2:30, meio da faixa de 2-3min pedida
 const REST_BETWEEN_WARMUP_SETS = 60;
 const TRANSITION_BETWEEN_EXERCISES = 90; // trocar de equipamento/posição
 
+// Tempo que quase sempre se perde num treino real e que as estimativas
+// "só as séries" ignoram: ir à casa de banho, encher a garrafa de água,
+// deslocações dentro do ginásio à procura de uma máquina livre, trocar de
+// sala (força → cardio), etc. Sobe com a duração do treino (um treino mais
+// longo tem mais chances de precisar de uma pausa destas).
+const BASE_OVERHEAD_SECONDS = 300; // 5 min, sempre presentes
+const OVERHEAD_SECONDS_PER_EXERCISE = 60; // +1 min por exercício (mais deslocações)
+
+function estimateOverheadSeconds(exerciseCount) {
+  return BASE_OVERHEAD_SECONDS + exerciseCount * OVERHEAD_SECONDS_PER_EXERCISE;
+}
+
 /** Tempo estimado (segundos) para um único exercício, incluindo aquecimento. */
 export function estimateExerciseSeconds(exercise, warmupSets = 0) {
   if (exercise.type === 'cardio') {
@@ -73,7 +85,8 @@ export function estimateExerciseSeconds(exercise, warmupSets = 0) {
 
 /**
  * Estimativa total de um treino, com a recomendação de aquecimento já
- * aplicada exercício a exercício (tendo em conta o que veio antes).
+ * aplicada exercício a exercício (tendo em conta o que veio antes), mais
+ * uma margem para casa de banho, água, deslocações no ginásio, etc.
  */
 export function estimateWorkoutTime(workout) {
   const alreadyWorked = new Set();
@@ -87,7 +100,11 @@ export function estimateWorkoutTime(workout) {
     if (ex.muscle) alreadyWorked.add(ex.muscle);
     return { name: ex.name, warmupSets, seconds };
   });
-  return { totalSeconds, breakdown };
+
+  const overheadSeconds = estimateOverheadSeconds(workout.exercises.length);
+  totalSeconds += overheadSeconds;
+
+  return { totalSeconds, breakdown, overheadSeconds };
 }
 
 export function formatDuration(totalSeconds) {
@@ -102,6 +119,7 @@ export function formatDuration(totalSeconds) {
 export function getGeneralTimeTips() {
   return [
     'Descansa sempre 2-3 minutos entre séries de trabalho — é o intervalo assumido nas estimativas desta app.',
+    'A estimativa já inclui uma margem para casa de banho, água e deslocações dentro do ginásio — não precisas de a somar por cima.',
     'Prepara os pesos/equipamento do próximo exercício enquanto descansas do atual.',
     'Usa um cronómetro para o descanso — sem ele, é fácil descansar mais do que precisas sem dar por isso.',
     'Chega ao ginásio já com a roupa e os auscultadores prontos — perdas de tempo antes de começar também contam.',

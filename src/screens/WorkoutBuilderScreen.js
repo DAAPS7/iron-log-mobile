@@ -407,7 +407,7 @@ function TimeManagementCard({ exercises }) {
   const [tipsOpen, setTipsOpen] = useState(false);
 
   const workout = useMemo(() => ({ exercises }), [exercises]);
-  const { totalSeconds, breakdown } = useMemo(() => estimateWorkoutTime(workout), [workout]);
+  const { totalSeconds, breakdown, overheadSeconds } = useMemo(() => estimateWorkoutTime(workout), [workout]);
   const specificTips = useMemo(() => getWorkoutSpecificTips(workout), [workout]);
   const generalTips = useMemo(() => getGeneralTimeTips(), []);
 
@@ -421,8 +421,9 @@ function TimeManagementCard({ exercises }) {
       </Body>
       <Note style={{ marginBottom: 10 }}>
         Assume 2-3min de descanso entre séries de trabalho, aquecimento mais
-        curto, e uma margem para trocar de exercício. Os exercícios sem
-        aquecimento definido manualmente usam a recomendação abaixo.
+        curto, uma margem para trocar de exercício, e tempo extra para casa
+        de banho/água/deslocações no ginásio. Os exercícios sem aquecimento
+        definido manualmente usam a recomendação abaixo.
       </Note>
 
       {breakdown.map((b, i) => (
@@ -443,6 +444,19 @@ function TimeManagementCard({ exercises }) {
           <Note>{formatDuration(b.seconds)}</Note>
         </View>
       ))}
+
+      <View
+        style={{
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          paddingVertical: 6,
+          borderTopWidth: 1,
+          borderTopColor: theme.colors.bgSoft,
+        }}
+      >
+        <Note>🚻 Casa de banho, água, deslocações</Note>
+        <Note>{formatDuration(overheadSeconds)}</Note>
+      </View>
 
       {specificTips.length || generalTips.length ? (
         <Pressable
