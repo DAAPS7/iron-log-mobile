@@ -2,13 +2,23 @@
  * Primitivos de UI partilhados por toda a app.
  *
  * Todos leem o tema via useTheme(), por isso respeitam automaticamente o
- * modo claro/escuro. Os ecrãs devem compor-se a partir daqui em vez de
- * escreverem estilos e cores à mão.
+ * modo claro/escuro/preto e a paleta escolhida. Os ecrãs devem compor-se a
+ * partir daqui em vez de escreverem estilos e cores à mão.
+ *
+ * Princípios seguidos aqui:
+ *  - profundidade por camadas de superfície (ver theme/tokens.js), não por
+ *    sombras pesadas;
+ *  - toda a interação tem resposta visual imediata (escala + opacidade);
+ *  - animações curtas (160-240ms) com curvas naturais;
+ *  - nenhum valor solto: espaçamento, raio, tipo e movimento vêm do tema.
  */
 
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
   ActivityIndicator,
+  Animated,
+  Easing,
+  Platform,
   Pressable,
   ScrollView,
   Text,
@@ -16,8 +26,73 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 
 import { useTheme } from '../context/ThemeContext';
+
+/* ---------- Ajudas de animação ----------
+ * Usamos a Animated API do React Native (não reanimated) nestes primitivos
+ * porque são animações simples de escala/opacidade e assim não pagamos o
+ * custo de worklets em componentes que aparecem dezenas de vezes por ecrã.
+ */
+
+function useBezier(curve) {
+  return Easing.bezier(curve[0], curve[1], curve[2], curve[3]);
+}
+
+/** Escala de resposta ao toque, partilhada por cartões e botões. */
+function usePressScale(enabled, targetScale) {
+  const theme = useTheme();
+  const scale = useRef(new Animated.Value(1)).current;
+  const ease = useBezier(theme.motion.easing.standard);
+
+  const to = (v) =>
+    Animated.timing(scale, {
+      toValue: v,
+      duration: theme.motion.duration.instant,
+      easing: ease,
+      useNativeDriver: true,
+    }).start();
+
+  return {
+    scale,
+    onPressIn: enabled ? () => to(targetScale ?? theme.motion.pressScale) : undefined,
+    onPressOut: enabled ? () => to(1) : undefined,
+  };
+}
+
+/** Faz o conteúdo entrar suavemente (fade + subida curta). */
+export function FadeInView({ children, delay = 0, style }) {
+  const theme = useTheme();
+  const progress = useRef(new Animated.Value(0)).current;
+  const ease = useBezier(theme.motion.easing.decelerate);
+
+  useEffect(() => {
+    Animated.timing(progress, {
+      toValue: 1,
+      duration: theme.motion.duration.base,
+      delay,
+      easing: ease,
+      useNativeDriver: true,
+    }).start();
+  }, []);
+
+  return (
+    <Animated.View
+      style={[
+        {
+          opacity: progress,
+          transform: [
+            { translateY: progress.interpolate({ inputRange: [0, 1], outputRange: [10, 0] }) },
+          ],
+        },
+        style,
+      ]}
+    >
+      {children}
+    </Animated.View>
+  );
+}
 
 /* ---------- Estrutura de ecrã ---------- */
 
@@ -27,18 +102,17 @@ export function Screen({ children, scroll = true, contentStyle }) {
   const theme = useTheme();
   const Container = scroll ? ScrollView : View;
   return (
-    <SafeAreaView
-      style={{ flex: 1, backgroundColor: theme.colors.bg }}
-      edges={['top']}
-    >
+    <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.bg }} edges={['top']}>
       <Container
         style={{ flex: 1 }}
         contentContainerStyle={
           scroll
             ? [
                 {
-                  padding: theme.spacing.md,
-                  paddingBottom: theme.spacing.xl * 2,
+                  padding: theme.space.lg,
+                  // Espaço extra em baixo para o conteúdo nunca ficar
+                  // escondido atrás da barra de navegação flutuante.
+                  paddingBottom: theme.space.xxxl * 2.5,
                   width: '100%',
                   maxWidth: MAX_CONTENT_WIDTH,
                   alignSelf: 'center',
@@ -47,6 +121,7 @@ export function Screen({ children, scroll = true, contentStyle }) {
               ]
             : { width: '100%', maxWidth: MAX_CONTENT_WIDTH, alignSelf: 'center' }
         }
+        showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
         {children}
@@ -55,86 +130,170 @@ export function Screen({ children, scroll = true, contentStyle }) {
   );
 }
 
-export function ScreenTitle({ children, subtitle }) {
-  const theme = useTheme();
-  return (
-    <View style={{ marginBottom: theme.spacing.lg }}>
-      <Text
-        style={{
-          fontFamily: theme.font.display,
-          fontSize: 28,
-          color: theme.colors.ink,
-          textTransform: 'uppercase',
-          letterSpacing: 0.5,
-        }}
-      >
-        {children}
-      </Text>
-      {subtitle ? (
-        <Text
-          style={{
-            fontFamily: theme.font.body,
-            fontSize: 13,
-            color: theme.colors.muted,
-            marginTop: 4,
-            lineHeight: 18,
-          }}
-        >
-          {subtitle}
-        </Text>
-      ) : null}
-    </View>
-  );
-}
-
-/* ---------- Cartões ---------- */
-
-export function Card({ children, accent, onPress, style }) {
-  const theme = useTheme();
-  const base = {
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radius,
-    padding: theme.spacing.lg,
-    marginBottom: theme.spacing.md,
-    ...(accent
-      ? { borderLeftWidth: 3, borderLeftColor: accent }
-      : null),
-  };
-  if (onPress) {
-    return (
-      <Pressable
-        onPress={onPress}
-        style={({ pressed }) => [base, pressed && { opacity: 0.75 }, style]}
-      >
-        {children}
-      </Pressable>
-    );
-  }
-  return <View style={[base, style]}>{children}</View>;
-}
-
-export function CardTitle({ children, right }) {
+/** Cabeçalho principal de um ecrã. */
+export function ScreenTitle({ children, subtitle, right }) {
   const theme = useTheme();
   return (
     <View
       style={{
         flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        flexWrap: 'wrap',
-        gap: 8,
-        marginBottom: theme.spacing.sm,
+        alignItems: 'flex-start',
+        marginBottom: theme.space.xl,
       }}
+    >
+      <View style={{ flex: 1 }}>
+        <Text
+          style={{
+            fontFamily: theme.font.display,
+            ...theme.type.h1,
+            color: theme.colors.textPrimary,
+          }}
+        >
+          {children}
+        </Text>
+        {subtitle ? (
+          <Text
+            style={{
+              fontFamily: theme.font.body,
+              ...theme.type.secondary,
+              color: theme.colors.textMuted,
+              marginTop: 4,
+            }}
+          >
+            {subtitle}
+          </Text>
+        ) : null}
+      </View>
+      {right}
+    </View>
+  );
+}
+
+/** Separador de secção — mais leve que um título de ecrã. */
+export function SectionHeader({ children, right, style }) {
+  const theme = useTheme();
+  return (
+    <View
+      style={[
+        {
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: theme.space.md,
+          marginTop: theme.space.xs,
+        },
+        style,
+      ]}
     >
       <Text
         style={{
           fontFamily: theme.font.bodyBold,
-          fontSize: 11,
-          letterSpacing: 1,
+          ...theme.type.label,
           textTransform: 'uppercase',
-          color: theme.colors.muted,
+          color: theme.colors.textMuted,
+        }}
+      >
+        {children}
+      </Text>
+      {right}
+    </View>
+  );
+}
+
+/* ---------- Superfícies ---------- */
+
+/**
+ * Cartão. Três níveis de destaque via `level`:
+ *   'surface'  (por omissão) — conteúdo normal
+ *   'elevated' — destaque, modais
+ *   'high'     — o elemento mais saliente do ecrã
+ *
+ * `accent` pinta uma faixa fina no topo (identidade da secção) e `onPress`
+ * ativa a resposta de toque.
+ */
+export function Card({ children, accent, onPress, style, level = 'surface', padded = true }) {
+  const theme = useTheme();
+  const { scale, onPressIn, onPressOut } = usePressScale(!!onPress);
+
+  const bg = {
+    surface: theme.colors.surface,
+    elevated: theme.colors.surfaceElevated,
+    high: theme.colors.surfaceHigh,
+  }[level];
+
+  const shadow = { surface: theme.elevation.low, elevated: theme.elevation.medium, high: theme.elevation.high }[
+    level
+  ];
+
+  const Wrapper = onPress ? Pressable : View;
+
+  return (
+    <Animated.View style={{ transform: [{ scale }], marginBottom: theme.space.lg }}>
+      <Wrapper
+        onPress={onPress}
+        onPressIn={onPressIn}
+        onPressOut={onPressOut}
+        style={[
+          {
+            backgroundColor: bg,
+            borderRadius: theme.radii.lg,
+            borderWidth: 1,
+            borderColor: theme.colors.border,
+            overflow: 'hidden',
+          },
+          shadow,
+          style,
+        ]}
+      >
+        {/* Brilho subtil no topo: sugere luz vinda de cima e evita que a
+            superfície pareça uma caixa lisa. */}
+        <LinearGradient
+          colors={theme.gradients.surfaceSheen}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 0, y: 1 }}
+          style={{ position: 'absolute', left: 0, right: 0, top: 0, height: 64, opacity: 0.5 }}
+          pointerEvents="none"
+        />
+        {accent ? (
+          <View
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              height: 3,
+              backgroundColor: accent,
+            }}
+            pointerEvents="none"
+          />
+        ) : null}
+        <View style={padded ? { padding: theme.space.lg } : null}>{children}</View>
+      </Wrapper>
+    </Animated.View>
+  );
+}
+
+export function CardTitle({ children, right, style }) {
+  const theme = useTheme();
+  return (
+    <View
+      style={[
+        {
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: theme.space.md,
+        },
+        style,
+      ]}
+    >
+      <Text
+        style={{
+          fontFamily: theme.font.bodyBold,
+          ...theme.type.label,
+          textTransform: 'uppercase',
+          color: theme.colors.textMuted,
+          flex: 1,
         }}
       >
         {children}
@@ -151,12 +310,7 @@ export function Body({ children, color, style }) {
   return (
     <Text
       style={[
-        {
-          fontFamily: theme.font.body,
-          fontSize: 14,
-          color: color || theme.colors.ink,
-          lineHeight: 20,
-        },
+        { fontFamily: theme.font.body, ...theme.type.body, color: color || theme.colors.textPrimary },
         style,
       ]}
     >
@@ -172,9 +326,8 @@ export function Note({ children, color, style }) {
       style={[
         {
           fontFamily: theme.font.body,
-          fontSize: 12,
-          color: color || theme.colors.muted,
-          lineHeight: 17,
+          ...theme.type.secondary,
+          color: color || theme.colors.textMuted,
         },
         style,
       ]}
@@ -184,26 +337,68 @@ export function Note({ children, color, style }) {
   );
 }
 
-/** Número grande de destaque (ex: peso atual, BMR). */
-export function BigStat({ value, unit, color }) {
+/**
+ * Número com contagem animada. Usado em estatísticas — o valor "sobe" até
+ * ao número final em vez de aparecer de repente, o que ajuda a perceber
+ * que aquele valor mudou.
+ */
+export function AnimatedNumber({ value, decimals = 0, style, color }) {
   const theme = useTheme();
+  const anim = useRef(new Animated.Value(0)).current;
+  const [display, setDisplay] = React.useState(0);
+  const ease = useBezier(theme.motion.easing.decelerate);
+  const target = Number(value) || 0;
+
+  useEffect(() => {
+    const id = anim.addListener(({ value: v }) => setDisplay(v));
+    anim.setValue(0);
+    Animated.timing(anim, {
+      toValue: target,
+      duration: theme.motion.duration.counter,
+      easing: ease,
+      useNativeDriver: false,
+    }).start();
+    return () => anim.removeListener(id);
+  }, [target]);
+
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6 }}>
-      <Text
-        style={{
-          fontFamily: theme.font.display,
-          fontSize: 32,
-          color: color || theme.colors.ink,
-        }}
-      >
-        {value}
-      </Text>
+    <Text style={[{ fontFamily: theme.font.display, color: color || theme.colors.textPrimary }, style]}>
+      {display.toFixed(decimals)}
+    </Text>
+  );
+}
+
+/** Estatística grande, com o número em destaque e a unidade discreta. */
+export function BigStat({ value, unit, color, animated = false }) {
+  const theme = useTheme();
+  const numeric = typeof value === 'number' || (!isNaN(parseFloat(value)) && isFinite(value));
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
+      {animated && numeric ? (
+        <AnimatedNumber
+          value={value}
+          decimals={Number.isInteger(Number(value)) ? 0 : 1}
+          color={color || theme.colors.textPrimary}
+          style={theme.type.numericLg}
+        />
+      ) : (
+        <Text
+          style={{
+            fontFamily: theme.font.display,
+            ...theme.type.numericLg,
+            color: color || theme.colors.textPrimary,
+          }}
+        >
+          {value}
+        </Text>
+      )}
       {unit ? (
         <Text
           style={{
             fontFamily: theme.font.body,
-            fontSize: 12,
-            color: theme.colors.muted,
+            ...theme.type.secondary,
+            color: theme.colors.textMuted,
+            marginLeft: 6,
           }}
         >
           {unit}
@@ -213,62 +408,125 @@ export function BigStat({ value, unit, color }) {
   );
 }
 
-/* ---------- Botões ---------- */
-
-export function Button({
-  title,
-  onPress,
-  variant = 'primary',
-  disabled,
-  loading,
-  style,
-}) {
+/** Etiqueta pequena, para estados e categorias. */
+export function Badge({ children, color, style }) {
   const theme = useTheme();
-  const palette = {
-    primary: { bg: theme.colors.ink, fg: theme.colors.bg, border: 'transparent' },
-    strength: { bg: theme.colors.strength, fg: '#fff', border: 'transparent' },
-    cardio: { bg: theme.colors.cardio, fg: '#fff', border: 'transparent' },
-    ghost: { bg: 'transparent', fg: theme.colors.ink, border: theme.colors.border },
-    danger: { bg: 'transparent', fg: theme.colors.danger, border: theme.colors.border },
-  }[variant];
-
+  const c = color || theme.colors.accent;
   return (
-    <Pressable
-      onPress={onPress}
-      disabled={disabled || loading}
-      style={({ pressed }) => [
+    <View
+      style={[
         {
-          backgroundColor: palette.bg,
-          borderColor: palette.border,
-          borderWidth: 1.5,
-          borderRadius: 999,
-          paddingVertical: 12,
-          paddingHorizontal: 20,
-          alignItems: 'center',
-          justifyContent: 'center',
-          flexShrink: 0,
-          opacity: disabled ? 0.45 : pressed ? 0.8 : 1,
+          paddingHorizontal: theme.space.md,
+          paddingVertical: 5,
+          borderRadius: theme.radii.pill,
+          backgroundColor: withAlphaSafe(c, 0.14),
+          borderWidth: 1,
+          borderColor: withAlphaSafe(c, 0.28),
         },
         style,
       ]}
     >
-      {loading ? (
-        <ActivityIndicator color={palette.fg} />
-      ) : (
-        <Text
-          numberOfLines={1}
-          style={{
-            fontFamily: theme.font.bodyBold,
-            fontSize: 13,
-            letterSpacing: 0.5,
-            textTransform: 'uppercase',
-            color: palette.fg,
-          }}
-        >
-          {title}
-        </Text>
-      )}
-    </Pressable>
+      <Text
+        style={{
+          fontFamily: theme.font.bodyBold,
+          ...theme.type.caption,
+          textTransform: 'uppercase',
+          color: c,
+        }}
+      >
+        {children}
+      </Text>
+    </View>
+  );
+}
+
+// Aceita hex ou rgb() — as cores de acento podem vir das duas formas.
+function withAlphaSafe(color, alpha) {
+  if (!color) return 'transparent';
+  if (color.startsWith('rgb(')) return color.replace('rgb(', 'rgba(').replace(')', `, ${alpha})`);
+  if (color.startsWith('rgba')) return color;
+  const h = color.replace('#', '');
+  const full = h.length === 3 ? h.split('').map((c) => c + c).join('') : h;
+  const r = parseInt(full.slice(0, 2), 16);
+  const g = parseInt(full.slice(2, 4), 16);
+  const b = parseInt(full.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+/* ---------- Botões ---------- */
+
+export function Button({ title, onPress, variant = 'primary', disabled, loading, style, icon }) {
+  const theme = useTheme();
+  const { scale, onPressIn, onPressOut } = usePressScale(!disabled && !loading, 0.955);
+
+  const isGradient = variant === 'primary' || variant === 'strength';
+
+  const palette = {
+    primary: { fg: theme.isDark ? '#0B0F0C' : '#FFFFFF', border: 'transparent' },
+    strength: { fg: theme.isDark ? '#0B0F0C' : '#FFFFFF', border: 'transparent' },
+    cardio: { bg: theme.colors.cardio, fg: theme.isDark ? '#08120F' : '#FFFFFF', border: 'transparent' },
+    ghost: { bg: 'transparent', fg: theme.colors.textPrimary, border: theme.colors.borderStrong },
+    danger: { bg: withAlphaSafe(theme.colors.danger, 0.12), fg: theme.colors.danger, border: withAlphaSafe(theme.colors.danger, 0.3) },
+  }[variant] || { bg: 'transparent', fg: theme.colors.textPrimary, border: theme.colors.borderStrong };
+
+  const content = loading ? (
+    <ActivityIndicator color={palette.fg} />
+  ) : (
+    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+      {icon ? <Text style={{ fontSize: 15 }}>{icon}</Text> : null}
+      <Text
+        numberOfLines={1}
+        style={{
+          fontFamily: theme.font.bodyBold,
+          ...theme.type.button,
+          textTransform: 'uppercase',
+          color: palette.fg,
+        }}
+      >
+        {title}
+      </Text>
+    </View>
+  );
+
+  const inner = {
+    minHeight: 46,
+    paddingVertical: 13,
+    paddingHorizontal: theme.space.xl,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: theme.radii.pill,
+  };
+
+  return (
+    <Animated.View style={[{ transform: [{ scale }], flexShrink: 0 }, style]}>
+      <Pressable
+        onPress={onPress}
+        disabled={disabled || loading}
+        onPressIn={onPressIn}
+        onPressOut={onPressOut}
+        style={{ opacity: disabled ? 0.4 : 1, borderRadius: theme.radii.pill, overflow: 'hidden' }}
+      >
+        {isGradient ? (
+          <LinearGradient
+            colors={theme.gradients.accent}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={inner}
+          >
+            {content}
+          </LinearGradient>
+        ) : (
+          <View
+            style={[
+              inner,
+              { backgroundColor: palette.bg, borderWidth: 1.5, borderColor: palette.border },
+            ]}
+          >
+            {content}
+          </View>
+        )}
+      </Pressable>
+    </Animated.View>
   );
 }
 
@@ -277,45 +535,56 @@ export function Button({
 export function Field({ label, hint, children, flex }) {
   const theme = useTheme();
   return (
-    <View style={{ marginBottom: theme.spacing.md, ...(flex ? { flex: 1 } : null) }}>
+    <View style={[{ marginBottom: theme.space.lg }, flex ? { flex: 1 } : null]}>
       {label ? (
         <Text
           style={{
             fontFamily: theme.font.bodyBold,
-            fontSize: 11,
-            letterSpacing: 0.5,
+            ...theme.type.label,
             textTransform: 'uppercase',
-            color: theme.colors.muted,
-            marginBottom: 6,
+            color: theme.colors.textMuted,
+            marginBottom: 7,
           }}
         >
           {label}
         </Text>
       ) : null}
       {children}
-      {hint ? <Note style={{ marginTop: 4 }}>{hint}</Note> : null}
+      {hint ? <Note style={{ marginTop: 6 }}>{hint}</Note> : null}
     </View>
   );
 }
 
 export function Input(props) {
   const theme = useTheme();
+  const [focused, setFocused] = React.useState(false);
   return (
     <TextInput
-      placeholderTextColor={theme.colors.muted}
+      placeholderTextColor={theme.colors.textMuted}
       {...props}
+      onFocus={(e) => {
+        setFocused(true);
+        props.onFocus?.(e);
+      }}
+      onBlur={(e) => {
+        setFocused(false);
+        props.onBlur?.(e);
+      }}
       style={[
         {
           borderWidth: 1.5,
-          borderColor: theme.colors.border,
-          borderRadius: theme.radiusSm,
-          paddingHorizontal: 12,
-          paddingVertical: 11,
+          // O foco é assinalado pela cor da borda — resposta imediata sem
+          // deslocar nada no layout.
+          borderColor: focused ? theme.colors.accent : theme.colors.border,
+          borderRadius: theme.radii.md,
+          paddingHorizontal: theme.space.lg,
+          paddingVertical: 13,
           fontFamily: theme.font.body,
-          fontSize: 16, // 16 evita zoom automático em alguns teclados
-          color: theme.colors.ink,
-          backgroundColor: theme.colors.surface,
+          fontSize: 16, // 16 evita o zoom automático de alguns teclados
+          color: theme.colors.textPrimary,
+          backgroundColor: theme.isDark ? theme.colors.bg : theme.colors.surface,
           minWidth: 0,
+          ...(Platform.OS === 'web' ? { outlineStyle: 'none' } : null),
         },
         props.style,
       ]}
@@ -323,19 +592,59 @@ export function Input(props) {
   );
 }
 
-/** Grupo de opções em linha (equivalente ao .seg da versão web). */
+/** Seletor segmentado com indicador que desliza entre as opções. */
 export function SegmentedControl({ options, value, onChange }) {
   const theme = useTheme();
+  const index = Math.max(0, options.findIndex((o) => o.value === value));
+  const anim = useRef(new Animated.Value(index)).current;
+  const [width, setWidth] = React.useState(0);
+  const ease = useBezier(theme.motion.easing.standard);
+
+  useEffect(() => {
+    Animated.timing(anim, {
+      toValue: index,
+      duration: theme.motion.duration.fast,
+      easing: ease,
+      useNativeDriver: true,
+    }).start();
+  }, [index]);
+
+  const segment = width ? width / options.length : 0;
+
   return (
     <View
+      onLayout={(e) => setWidth(e.nativeEvent.layout.width)}
       style={{
         flexDirection: 'row',
-        borderWidth: 1.5,
+        borderRadius: theme.radii.pill,
+        backgroundColor: theme.isDark ? theme.colors.bg : theme.colors.bgSoft,
+        borderWidth: 1,
         borderColor: theme.colors.border,
-        borderRadius: 999,
+        padding: 4,
         overflow: 'hidden',
       }}
     >
+      {segment > 0 ? (
+        <Animated.View
+          style={{
+            position: 'absolute',
+            top: 4,
+            bottom: 4,
+            left: 4,
+            width: segment - 2,
+            borderRadius: theme.radii.pill,
+            backgroundColor: theme.colors.accent,
+            transform: [
+              {
+                translateX: anim.interpolate({
+                  inputRange: options.map((_, i) => i),
+                  outputRange: options.map((_, i) => i * segment),
+                }),
+              },
+            ],
+          }}
+        />
+      ) : null}
       {options.map((opt) => {
         const active = opt.value === value;
         return (
@@ -345,10 +654,9 @@ export function SegmentedControl({ options, value, onChange }) {
             style={{
               flex: 1,
               minWidth: 0,
-              paddingVertical: 10,
+              paddingVertical: 9,
               paddingHorizontal: 6,
               alignItems: 'center',
-              backgroundColor: active ? theme.colors.ink : 'transparent',
             }}
           >
             <Text
@@ -356,9 +664,13 @@ export function SegmentedControl({ options, value, onChange }) {
               adjustsFontSizeToFit
               style={{
                 fontFamily: theme.font.bodyBold,
-                fontSize: 12,
+                ...theme.type.caption,
                 textTransform: 'uppercase',
-                color: active ? theme.colors.bg : theme.colors.muted,
+                color: active
+                  ? theme.isDark
+                    ? '#0B0F0C'
+                    : '#FFFFFF'
+                  : theme.colors.textMuted,
               }}
             >
               {opt.label}
@@ -370,58 +682,117 @@ export function SegmentedControl({ options, value, onChange }) {
   );
 }
 
-/* ---------- Estados vazios ---------- */
+/* ---------- Estados ---------- */
 
-export function EmptyState({ title, message, action }) {
+export function EmptyState({ title, message, action, icon = '✦' }) {
   const theme = useTheme();
   return (
-    <View
-      style={{
-        borderWidth: 1.5,
-        borderStyle: 'dashed',
-        borderColor: theme.colors.border,
-        borderRadius: theme.radius,
-        padding: theme.spacing.xl,
-        alignItems: 'center',
-      }}
-    >
-      <Text
+    <FadeInView>
+      <View
         style={{
-          fontFamily: theme.font.display,
-          fontSize: 18,
-          color: theme.colors.ink,
-          textTransform: 'uppercase',
-          marginBottom: 6,
-          textAlign: 'center',
+          borderRadius: theme.radii.lg,
+          backgroundColor: theme.colors.surface,
+          borderWidth: 1,
+          borderColor: theme.colors.border,
+          paddingVertical: theme.space.xxl,
+          paddingHorizontal: theme.space.xl,
+          alignItems: 'center',
         }}
       >
-        {title}
-      </Text>
-      <Note style={{ textAlign: 'center', marginBottom: action ? 14 : 0 }}>
-        {message}
-      </Note>
-      {action}
-    </View>
+        <View
+          style={{
+            width: 52,
+            height: 52,
+            borderRadius: theme.radii.pill,
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: withAlphaSafe(theme.colors.accent, 0.12),
+            marginBottom: theme.space.lg,
+          }}
+        >
+          <Text style={{ fontSize: 22, color: theme.colors.accent }}>{icon}</Text>
+        </View>
+        <Text
+          style={{
+            fontFamily: theme.font.display,
+            ...theme.type.h3,
+            color: theme.colors.textPrimary,
+            marginBottom: 6,
+            textAlign: 'center',
+          }}
+        >
+          {title}
+        </Text>
+        <Note style={{ textAlign: 'center', marginBottom: action ? theme.space.lg : 0 }}>
+          {message}
+        </Note>
+        {action}
+      </View>
+    </FadeInView>
   );
 }
 
-/* ---------- Barra de progresso ---------- */
+/** Bloco de carregamento com pulsação — evita saltos bruscos de layout. */
+export function Skeleton({ height = 16, width = '100%', radius, style }) {
+  const theme = useTheme();
+  const pulse = useRef(new Animated.Value(0)).current;
 
-export function ProgressBar({ value, goal, color, label, unit = 'g' }) {
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, { toValue: 1, duration: 700, useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 0, duration: 700, useNativeDriver: true }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, []);
+
+  return (
+    <Animated.View
+      style={[
+        {
+          height,
+          width,
+          borderRadius: radius ?? theme.radii.sm,
+          backgroundColor: theme.colors.bgSoft,
+          opacity: pulse.interpolate({ inputRange: [0, 1], outputRange: [0.45, 0.9] }),
+        },
+        style,
+      ]}
+    />
+  );
+}
+
+/* ---------- Progresso ---------- */
+
+/** Barra de progresso com preenchimento em gradiente e animação de entrada. */
+export function ProgressBar({ value, goal, color, label, unit = 'g', height = 10 }) {
   const theme = useTheme();
   const pct = goal ? Math.max(0, Math.min(100, (value / goal) * 100)) : 0;
+  const anim = useRef(new Animated.Value(0)).current;
+  const ease = useBezier(theme.motion.easing.decelerate);
+
+  useEffect(() => {
+    Animated.timing(anim, {
+      toValue: pct,
+      duration: theme.motion.duration.base,
+      easing: ease,
+      useNativeDriver: false,
+    }).start();
+  }, [pct]);
+
+  const width = anim.interpolate({ inputRange: [0, 100], outputRange: ['0%', '100%'] });
+  const complete = pct >= 100;
+
   return (
-    <View style={{ marginBottom: theme.spacing.sm }}>
+    <View style={{ marginBottom: theme.space.md }}>
       {label ? (
         <View
-          style={{
-            flexDirection: 'row',
-            justifyContent: 'space-between',
-            marginBottom: 4,
-          }}
+          style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}
         >
-          <Note>{label}</Note>
-          <Note>
+          <Note color={theme.colors.textSecondary}>{label}</Note>
+          <Note color={complete ? theme.colors.good : theme.colors.textMuted}>
             {Math.round(value)}
             {unit}
             {goal ? ` / ${goal}${unit}` : ''}
@@ -430,20 +801,22 @@ export function ProgressBar({ value, goal, color, label, unit = 'g' }) {
       ) : null}
       <View
         style={{
-          height: 14,
-          borderRadius: 999,
-          backgroundColor: theme.colors.bgSoft,
+          height,
+          borderRadius: theme.radii.pill,
+          backgroundColor: theme.isDark ? theme.colors.bg : theme.colors.bgSoft,
           overflow: 'hidden',
+          borderWidth: 1,
+          borderColor: theme.colors.hairline,
         }}
       >
-        <View
-          style={{
-            width: `${pct}%`,
-            height: '100%',
-            borderRadius: 999,
-            backgroundColor: color || theme.colors.strength,
-          }}
-        />
+        <Animated.View style={{ width, height: '100%' }}>
+          <LinearGradient
+            colors={color ? [color, color] : theme.gradients.accent}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={{ flex: 1, borderRadius: theme.radii.pill }}
+          />
+        </Animated.View>
       </View>
     </View>
   );

@@ -55,9 +55,12 @@ export function defaultData() {
 
 export function defaultSettings() {
   return {
-    theme: 'light',
+    // Escuro + Iron é a identidade da app. Quem já tiver escolhido outra
+    // coisa mantém a sua preferência (fica guardada na conta); isto só se
+    // aplica a contas novas.
+    theme: 'dark',
     font: 'unbounded-jakarta',
-    palette: 'classic',
+    palette: 'iron',
     accentStrength: null,
     accentCardio: null,
     radius: 14,

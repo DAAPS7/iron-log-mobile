@@ -18,11 +18,14 @@ import {
 import StatRing from '../components/StatRing';
 import MetricInsightModal from '../components/MetricInsightModal';
 import BodyMuscleMap from '../components/BodyMuscleMap';
+import Icon from '../components/Icon';
+import HeroCard from '../components/HeroCard';
 import { useStore } from '../context/StoreContext';
 import { useTheme } from '../context/ThemeContext';
 import { todayLocal } from '../lib/date';
 import { evaluateAllGoals } from '../lib/goals';
 import { computeMuscleRegionProgress } from '../lib/muscleProgress';
+import { weekdayKeyFor, WEEKDAY_LABELS } from '../lib/schedule';
 import { bodyFatColor } from '../theme/theme';
 import {
   classifyBodyFat,
@@ -58,6 +61,19 @@ export default function ProfileScreen({ navigation }) {
   if (!data) return null;
   const p = data.profile;
 
+  // Treino do dia para o hero — mesma lógica do ecrã de Treinos, para os
+  // dois ecrãs nunca discordarem sobre o que está planeado para hoje.
+  const todayKey = weekdayKeyFor(new Date());
+  const scheduledWorkout = data.workouts.find(
+    (w) => w.id === data.weeklySchedule?.[todayKey],
+  );
+  const hasSchedule = Object.values(data.weeklySchedule || {}).some(Boolean);
+  const alreadyDoneToday =
+    !!scheduledWorkout &&
+    data.loggedWorkouts.some(
+      (lw) => lw.date === todayLocal() && lw.workoutId === scheduledWorkout.id,
+    );
+
   const age = p ? computeAge(p.birthdate) : null;
   const bf = p ? computeBodyFat(p.gender, p.height, p.waist, p.neck, p.hip) : null;
   const bmr = p && weight ? computeBMR(p.gender, weight, p.height, age) : null;
@@ -67,20 +83,28 @@ export default function ProfileScreen({ navigation }) {
       <View
         style={{
           flexDirection: 'row',
-          justifyContent: 'space-between',
-          alignItems: 'flex-start',
+          justifyContent: 'flex-end',
+          alignItems: 'center',
+          gap: 8,
+          marginBottom: theme.space.lg,
         }}
       >
-        <View style={{ flex: 1 }}>
-          <ScreenTitle subtitle="As tuas biometrias e evolução de peso.">
-            Perfil
-          </ScreenTitle>
-        </View>
-        <View style={{ flexDirection: 'row', gap: 8 }}>
-          <HeaderIcon icon="👥" onPress={() => navigation.navigate('Friends')} />
-          <HeaderIcon icon="⚙️" onPress={() => navigation.navigate('Settings')} />
-        </View>
+        <HeaderIcon icon="friends" onPress={() => navigation.navigate('Friends')} />
+        <HeaderIcon icon="settings" onPress={() => navigation.navigate('Settings')} />
       </View>
+
+      <HeroCard
+        name={username}
+        weekdayLabel={WEEKDAY_LABELS[todayKey]}
+        scheduledWorkout={scheduledWorkout}
+        alreadyDone={alreadyDoneToday}
+        hasSchedule={hasSchedule}
+        onStart={
+          scheduledWorkout
+            ? () => navigation.navigate('LogSession', { workoutId: scheduledWorkout.id })
+            : null
+        }
+      />
 
       {!p || editing ? (
         <ProfileForm
@@ -216,23 +240,37 @@ export default function ProfileScreen({ navigation }) {
   );
 }
 
-function HeaderIcon({ icon, onPress }) {
+function HeaderIcon({ icon, onPress, badge }) {
   const theme = useTheme();
   return (
     <Pressable
       onPress={onPress}
-      style={{
-        width: 38,
-        height: 38,
-        borderRadius: theme.radiusSm,
+      style={({ pressed }) => ({
+        width: 42,
+        height: 42,
+        borderRadius: theme.radii.md,
         borderWidth: 1,
         borderColor: theme.colors.border,
-        backgroundColor: theme.colors.surface,
+        backgroundColor: theme.colors.surfaceElevated,
         alignItems: 'center',
         justifyContent: 'center',
-      }}
+        opacity: pressed ? 0.6 : 1,
+      })}
     >
-      <Text style={{ fontSize: 16 }}>{icon}</Text>
+      <Icon name={icon} size={20} color={theme.colors.textSecondary} />
+      {badge ? (
+        <View
+          style={{
+            position: 'absolute',
+            top: 7,
+            right: 7,
+            width: 8,
+            height: 8,
+            borderRadius: 4,
+            backgroundColor: theme.colors.accent,
+          }}
+        />
+      ) : null}
     </Pressable>
   );
 }

@@ -7,9 +7,14 @@
  * todo o lado sem casos especiais.
  */
 
+import { SPACE, RADIUS, TYPE, MOTION, buildElevation } from './tokens';
+
+// Valores antigos, mantidos porque os ecrãs existentes ainda os usam via
+// theme.radius / theme.spacing.*. Código novo deve usar theme.radii e
+// theme.space (ver theme/tokens.js).
 const base = {
-  radius: 14,
-  radiusSm: 8,
+  radius: 16,
+  radiusSm: 10,
   spacing: { xs: 4, sm: 8, md: 14, lg: 18, xl: 24 },
 };
 
@@ -60,6 +65,16 @@ export function getFontSet(key) {
 
 export const PALETTE_OPTIONS = [
   {
+    // Paleta assinatura do Iron Log: lima elétrico sobre carvão profundo.
+    // Lê-se como performance/tecnologia em vez de "app de ginásio genérica".
+    // Em modo claro o lima puro não tem contraste suficiente sobre branco,
+    // por isso desce para um verde-oliva escuro que mantém a mesma família.
+    key: 'iron',
+    label: 'Iron (lima elétrico)',
+    light: { strength: '#4A7A00', cardio: '#00806A', gold: '#A86B00', info: '#4A55C7' },
+    dark: { strength: '#CDFF47', cardio: '#00E5A0', gold: '#FFC848', info: '#8B9BFF' },
+  },
+  {
     key: 'inferno',
     label: 'Inferno (laranja & vermelho)',
     light: { strength: '#FF3D00', cardio: '#00C853', gold: '#FFAB00', info: '#D50000' },
@@ -89,39 +104,80 @@ export function getPalette(key) {
   return PALETTE_OPTIONS.find((p) => p.key === key) || PALETTE_OPTIONS[0];
 }
 
+/*
+ * Cada modo define quatro níveis de superfície. A profundidade da interface
+ * vem sobretudo desta escada de tons (mais do que das sombras, que quase
+ * não se veem em fundo escuro):
+ *
+ *   bg              → fundo do ecrã, o plano mais recuado
+ *   surface         → cartões normais
+ *   surfaceElevated → cartões em destaque, modais
+ *   surfaceHigh     → o elemento mais saliente do ecrã (hero, barra flutuante)
+ *
+ * Os nomes antigos (bgSoft, ink) mantêm-se como aliases para não partir os
+ * ecrãs que ainda os usam.
+ */
 const neutralLight = {
-  bg: '#EEF1EC',
-  bgSoft: '#E4E9E2',
+  bg: '#F2F4F0',
+  bgSoft: '#E8ECE5',
   surface: '#FFFFFF',
-  border: '#D7DED4',
-  ink: '#1B211D',
-  muted: '#5C665F',
+  surfaceElevated: '#FFFFFF',
+  surfaceHigh: '#FFFFFF',
+  border: 'rgba(20, 30, 24, 0.10)',
+  borderStrong: 'rgba(20, 30, 24, 0.18)',
+  hairline: 'rgba(20, 30, 24, 0.07)',
+  ink: '#141A16',
+  textPrimary: '#141A16',
+  textSecondary: '#4B564E',
+  textMuted: '#7A857D',
+  muted: '#7A857D',
   good: '#2E9E4F',
+  warning: '#B77400',
   danger: '#C23B3B',
+  scrim: 'rgba(18, 24, 20, 0.32)',
 };
 
 const neutralDark = {
-  bg: '#14171B',
-  bgSoft: '#1D2126',
-  surface: '#1A1E22',
-  border: '#2B3035',
-  ink: '#EDEFEF',
-  muted: '#8B939C',
+  bg: '#0E1113',
+  bgSoft: '#171B1E',
+  surface: '#171B1E',
+  surfaceElevated: '#1F2428',
+  surfaceHigh: '#272D31',
+  border: 'rgba(255, 255, 255, 0.09)',
+  borderStrong: 'rgba(255, 255, 255, 0.16)',
+  hairline: 'rgba(255, 255, 255, 0.06)',
+  ink: '#F1F4F2',
+  textPrimary: '#F1F4F2',
+  textSecondary: '#A8B2AC',
+  textMuted: '#78827C',
+  muted: '#78827C',
   good: '#4ADE80',
+  warning: '#F0B94E',
   danger: '#E36A6A',
+  scrim: 'rgba(0, 0, 0, 0.55)',
 };
 
 // Modo "Preto" — pensado para ecrãs OLED (poupa bateria, contraste máximo).
-// Usa os mesmos acentos do modo escuro, só o fundo é que passa a preto puro.
+// Usa os mesmos acentos do modo escuro; só o fundo desce a preto puro, e as
+// superfícies sobem em degraus muito curtos para não "acender" o ecrã.
 const neutralBlack = {
   bg: '#000000',
-  bgSoft: '#0A0A0A',
-  surface: '#0D0D0D',
-  border: '#242424',
-  ink: '#F2F2F2',
-  muted: '#8B939C',
+  bgSoft: '#0B0C0D',
+  surface: '#0B0C0D',
+  surfaceElevated: '#141618',
+  surfaceHigh: '#1C1F21',
+  border: 'rgba(255, 255, 255, 0.10)',
+  borderStrong: 'rgba(255, 255, 255, 0.18)',
+  hairline: 'rgba(255, 255, 255, 0.06)',
+  ink: '#F4F6F5',
+  textPrimary: '#F4F6F5',
+  textSecondary: '#A2ACA6',
+  textMuted: '#727B76',
+  muted: '#727B76',
   good: '#4ADE80',
+  warning: '#F0B94E',
   danger: '#E36A6A',
+  scrim: 'rgba(0, 0, 0, 0.65)',
 };
 
 const NEUTRALS_BY_MODE = {
@@ -141,11 +197,48 @@ export function buildTheme(mode, fontKey, paletteKey) {
   const neutral = NEUTRALS_BY_MODE[safeMode];
   // "Preto" reaproveita os acentos do modo escuro — só o fundo muda.
   const accents = safeMode === 'light' ? palette.light : palette.dark;
+  const colors = {
+    ...neutral,
+    ...accents,
+    // Nomes semânticos para os acentos. `strength`/`cardio` continuam a
+    // existir (são usados por todo o lado e têm significado de domínio),
+    // mas quando o que se quer é "a cor da marca" usa-se accent/accent2.
+    accent: accents.strength,
+    accent2: accents.cardio,
+  };
+
+  const isDark = safeMode !== 'light';
+
   return {
     ...base,
     mode: safeMode,
+    isDark,
     font: getFontSet(fontKey),
-    colors: { ...neutral, ...accents },
+    colors,
+
+    // Tokens do design system (ver theme/tokens.js)
+    space: SPACE,
+    radii: RADIUS,
+    type: TYPE,
+    motion: MOTION,
+    elevation: buildElevation(safeMode),
+
+    /*
+     * Gradientes prontos a passar ao <LinearGradient colors={...}>.
+     * São deliberadamente subtis: servem para dar vida a superfícies e
+     * barras de progresso, não para pintar o ecrã.
+     */
+    gradients: {
+      // Ação principal e barras de progresso: do acento para o secundário.
+      accent: [accents.strength, accents.cardio],
+      // Superfície em destaque: um brilho quase impercetível no topo do
+      // cartão, que sugere luz a vir de cima.
+      surfaceSheen: isDark
+        ? ['rgba(255,255,255,0.07)', 'rgba(255,255,255,0.015)']
+        : ['rgba(255,255,255,0.9)', 'rgba(255,255,255,0.35)'],
+      // Véu escuro sobre imagens/heros, para o texto se manter legível.
+      scrim: ['rgba(0,0,0,0)', 'rgba(0,0,0,0.75)'],
+    },
   };
 }
 

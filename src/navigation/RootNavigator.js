@@ -10,9 +10,8 @@ import React from 'react';
 import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { Text } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import TabBar from '../components/TabBar';
 import { useStore } from '../context/StoreContext';
 import { useTheme } from '../context/ThemeContext';
 
@@ -30,48 +29,19 @@ import WorkoutBuilderScreen from '../screens/WorkoutBuilderScreen';
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
 
-const TAB_ICONS = {
-  Perfil: '👤',
-  Treinos: '🏋️',
-  Nutrição: '🍽️',
-  Progresso: '📈',
-  Histórico: '📋',
-};
-
 function MainTabs() {
-  const theme = useTheme();
-  const insets = useSafeAreaInsets();
-  const bottomPad = Math.max(insets.bottom, 10);
-
   return (
     <Tab.Navigator
-      screenOptions={({ route }) => ({
+      // A barra é totalmente personalizada (ver components/TabBar.js):
+      // flutua sobre o conteúdo, com indicador animado e ícones do nosso
+      // sistema em vez de emoji.
+      tabBar={(props) => <TabBar {...props} />}
+      screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: theme.colors.strength,
-        tabBarInactiveTintColor: theme.colors.muted,
-        tabBarStyle: {
-          backgroundColor: theme.colors.surface,
-          borderTopColor: theme.colors.border,
-          borderTopWidth: 1,
-          height: 56 + bottomPad,
-          paddingTop: 8,
-          paddingBottom: bottomPad,
-        },
-        tabBarItemStyle: {
-          paddingVertical: 2,
-        },
-        tabBarLabelStyle: {
-          fontFamily: theme.font.bodyBold,
-          fontSize: 10,
-          textTransform: 'uppercase',
-          marginTop: 2,
-        },
-        tabBarIcon: ({ focused }) => (
-          <Text style={{ fontSize: 18, opacity: focused ? 1 : 0.6 }}>
-            {TAB_ICONS[route.name]}
-          </Text>
-        ),
-      })}
+        // O conteúdo corre por baixo da barra flutuante; o espaço extra
+        // no fundo é garantido pelo <Screen> (ver components/ui.js).
+        tabBarStyle: { position: 'absolute' },
+      }}
     >
       <Tab.Screen name="Perfil" component={ProfileScreen} />
       <Tab.Screen name="Treinos" component={WorkoutsScreen} />
