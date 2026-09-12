@@ -18,6 +18,7 @@ import MealPlanBuilderModal from '../components/MealPlanBuilderModal';
 import DailySummary from '../components/DailySummary';
 import MicronutrientModal from '../components/MicronutrientModal';
 import CreatineCard from '../components/CreatineCard';
+import Icon from '../components/Icon';
 import { confirmAsync } from '../lib/confirm';
 import { useStore } from '../context/StoreContext';
 import { useTheme } from '../context/ThemeContext';
@@ -41,6 +42,29 @@ export default function NutritionScreen() {
     () => (data?.calorieEntries || []).filter((e) => e.date === date),
     [data?.calorieEntries, date],
   );
+
+  // Alimentos com o mesmo mealGroupId vieram juntos de uma refeição do
+  // plano — agrupam-se numa única linha expansível. Os que não têm
+  // mealGroupId (registados um a um, ou pesquisados) continuam avulsos.
+  const groupedEntries = useMemo(() => {
+    const groups = [];
+    const byGroupId = new Map();
+    entries.forEach((e) => {
+      if (!e.mealGroupId) {
+        groups.push({ type: 'single', entry: e });
+        return;
+      }
+      let group = byGroupId.get(e.mealGroupId);
+      if (!group) {
+        group = { type: 'meal', mealGroupId: e.mealGroupId, mealName: e.mealName, items: [] };
+        byGroupId.set(e.mealGroupId, group);
+        groups.push(group);
+      }
+      group.items.push(e);
+    });
+    return groups;
+  }, [entries]);
+
   const currentWeight = useMemo(() => {
     const history = data?.weightHistory || [];
     if (!history.length) return null;
@@ -142,16 +166,38 @@ export default function NutritionScreen() {
   }
 
   function addMealToDay(meal) {
+    // Um id partilhado por todos os alimentos desta refeição — permite
+    // tratá-los como "uma coisa só" no diário (apagar tudo de uma vez se
+    // te enganaste), mantendo cada alimento como registo individual por
+    // baixo, para poderes remover só um se preferires.
+    const mealGroupId = uid();
     const newEntries = meal.foods.map((f) => ({
       ...computeFoodTotals(f, f.quantity),
       name: f.name,
       id: uid(),
       date,
+      mealGroupId,
+      mealName: meal.name,
     }));
     updateData((prev) => ({
       ...prev,
       calorieEntries: [...prev.calorieEntries, ...newEntries],
     }));
+  }
+
+  function removeMealGroup(mealGroupId) {
+    updateData((prev) => {
+      const toRemove = prev.calorieEntries.filter((e) => e.mealGroupId === mealGroupId);
+      let deletedIds = prev.deletedIds;
+      toRemove.forEach((e) => {
+        deletedIds = markDeleted({ ...prev, deletedIds }, 'calorieEntries', e.id);
+      });
+      return {
+        ...prev,
+        calorieEntries: prev.calorieEntries.filter((e) => e.mealGroupId !== mealGroupId),
+        deletedIds,
+      };
+    });
   }
 
   function savePlan(plan) {
@@ -315,33 +361,27 @@ export default function NutritionScreen() {
 
       <Card>
         <CardTitle>Registos de hoje</CardTitle>
-        {!entries.length ? (
+        {!groupedEntries.length ? (
           <Note>Ainda sem registos neste dia.</Note>
         ) : (
-          entries.map((e, i) => (
-            <View
-              key={e.id}
-              style={{
-                paddingVertical: 9,
-                borderTopWidth: i === 0 ? 0 : 1,
-                borderTopColor: theme.colors.bgSoft,
-              }}
-            >
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 8 }}>
-                <Body style={{ flex: 1 }}>{e.name}</Body>
-                <Note>{e.calories} kcal</Note>
-              </View>
-              {e.protein || e.carbs || e.fat ? (
-                <Note>
-                  P:{Math.round(e.protein || 0)}g H:{Math.round(e.carbs || 0)}g G:
-                  {Math.round(e.fat || 0)}g
-                </Note>
-              ) : null}
-              <Pressable onPress={() => removeEntry(e.id)}>
-                <Note color={theme.colors.danger}>Apagar</Note>
-              </Pressable>
-            </View>
-          ))
+          groupedEntries.map((g, i) =>
+            g.type === 'single' ? (
+              <SingleEntryRow
+                key={g.entry.id}
+                entry={g.entry}
+                showTopBorder={i > 0}
+                onRemove={() => removeEntry(g.entry.id)}
+              />
+            ) : (
+              <MealGroupRow
+                key={g.mealGroupId}
+                group={g}
+                showTopBorder={i > 0}
+                onRemoveAll={() => removeMealGroup(g.mealGroupId)}
+                onRemoveOne={removeEntry}
+              />
+            ),
+          )
         )}
       </Card>
 
@@ -361,6 +401,107 @@ export default function NutritionScreen() {
 
 /** Metas de calorias e macros, com o total calórico dos macros calculado. */
 /** Tracker de água — total do dia vs. recomendação a partir do peso. */
+/** Um alimento avulso (registado à mão ou pesquisado) na lista do dia. */
+function SingleEntryRow({ entry: e, showTopBorder, onRemove }) {
+  const theme = useTheme();
+  return (
+    <View
+      style={{
+        paddingVertical: 9,
+        borderTopWidth: showTopBorder ? 1 : 0,
+        borderTopColor: theme.colors.hairline,
+      }}
+    >
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 8 }}>
+        <Body style={{ flex: 1 }}>{e.name}</Body>
+        <Note>{e.calories} kcal</Note>
+      </View>
+      {e.protein || e.carbs || e.fat ? (
+        <Note>
+          P:{Math.round(e.protein || 0)}g H:{Math.round(e.carbs || 0)}g G:
+          {Math.round(e.fat || 0)}g
+        </Note>
+      ) : null}
+      <Pressable onPress={onRemove}>
+        <Note color={theme.colors.danger}>Apagar</Note>
+      </Pressable>
+    </View>
+  );
+}
+
+/**
+ * Uma refeição inteira adicionada de um plano — uma linha só, com o total
+ * da refeição e um "Apagar tudo". Expande para mostrar (e remover)
+ * ingredientes individuais, para quando só um estiver errado.
+ */
+function MealGroupRow({ group, showTopBorder, onRemoveAll, onRemoveOne }) {
+  const theme = useTheme();
+  const [open, setOpen] = useState(false);
+
+  const totals = group.items.reduce(
+    (acc, e) => ({
+      calories: acc.calories + (e.calories || 0),
+      protein: acc.protein + (e.protein || 0),
+      carbs: acc.carbs + (e.carbs || 0),
+      fat: acc.fat + (e.fat || 0),
+    }),
+    { calories: 0, protein: 0, carbs: 0, fat: 0 },
+  );
+
+  return (
+    <View
+      style={{
+        paddingVertical: 9,
+        borderTopWidth: showTopBorder ? 1 : 0,
+        borderTopColor: theme.colors.hairline,
+      }}
+    >
+      <Pressable
+        onPress={() => setOpen((o) => !o)}
+        style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}
+      >
+        <Icon name={open ? 'chevronUp' : 'chevronDown'} size={15} color={theme.colors.textMuted} />
+        <Body style={{ flex: 1, fontFamily: theme.font.bodyBold }}>
+          {group.mealName || 'Refeição'}
+        </Body>
+        <Note>{Math.round(totals.calories)} kcal</Note>
+      </Pressable>
+      <Note style={{ marginLeft: 23 }}>
+        P:{Math.round(totals.protein)}g H:{Math.round(totals.carbs)}g G:{Math.round(totals.fat)}g
+        {' · '}
+        {group.items.length} {group.items.length === 1 ? 'ingrediente' : 'ingredientes'}
+      </Note>
+
+      {open ? (
+        <View style={{ marginLeft: 23, marginTop: 6 }}>
+          {group.items.map((e) => (
+            <View
+              key={e.id}
+              style={{
+                paddingVertical: 6,
+                borderTopWidth: 1,
+                borderTopColor: theme.colors.hairline,
+              }}
+            >
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 8 }}>
+                <Note color={theme.colors.textPrimary}>{e.name}</Note>
+                <Note>{e.calories} kcal</Note>
+              </View>
+              <Pressable onPress={() => onRemoveOne(e.id)}>
+                <Note color={theme.colors.danger}>Remover só este</Note>
+              </Pressable>
+            </View>
+          ))}
+        </View>
+      ) : null}
+
+      <Pressable onPress={onRemoveAll} style={{ marginTop: 6, marginLeft: 23 }}>
+        <Note color={theme.colors.danger}>Apagar refeição inteira</Note>
+      </Pressable>
+    </View>
+  );
+}
+
 function WaterCard({ totalMl, goalMl, hasWeight, onAdd, onReset }) {
   const theme = useTheme();
   const [custom, setCustom] = useState('');
@@ -387,7 +528,13 @@ function WaterCard({ totalMl, goalMl, hasWeight, onAdd, onReset }) {
           {pct}%
         </Text>
       </View>
-      <ProgressBar value={totalMl} goal={goalMl} color={theme.colors.cardio} unit="ml" />
+      <ProgressBar
+        label="Hoje"
+        value={totalMl}
+        goal={goalMl}
+        color={theme.colors.cardio}
+        unit="ml"
+      />
       <Note style={{ marginBottom: 10 }}>
         {hasWeight
           ? `Recomendação estimada a partir do teu peso: ${goalMl}ml/dia.`
