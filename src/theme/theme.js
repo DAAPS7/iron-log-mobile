@@ -7,7 +7,7 @@
  * todo o lado sem casos especiais.
  */
 
-import { SPACE, RADIUS, TYPE, MOTION, buildElevation } from './tokens';
+import { SPACE, RADIUS, TYPE, MOTION, buildElevation } from "./tokens";
 
 // Valores antigos, mantidos porque os ecrãs existentes ainda os usam via
 // theme.radius / theme.spacing.*. Código novo deve usar theme.radii e
@@ -22,32 +22,32 @@ const base = {
 
 export const FONT_OPTIONS = [
   {
-    key: 'unbounded-jakarta',
-    label: 'Unbounded / Plus Jakarta Sans',
-    display: 'Unbounded_700Bold',
-    body: 'PlusJakartaSans_500Medium',
-    bodyBold: 'PlusJakartaSans_700Bold',
+    key: "unbounded-jakarta",
+    label: "Unbounded / Plus Jakarta Sans",
+    display: "Unbounded_700Bold",
+    body: "PlusJakartaSans_500Medium",
+    bodyBold: "PlusJakartaSans_700Bold",
   },
   {
-    key: 'anton-work',
-    label: 'Anton / Work Sans',
-    display: 'Anton_400Regular',
-    body: 'WorkSans_500Medium',
-    bodyBold: 'WorkSans_700Bold',
+    key: "anton-work",
+    label: "Anton / Work Sans",
+    display: "Anton_400Regular",
+    body: "WorkSans_500Medium",
+    bodyBold: "WorkSans_700Bold",
   },
   {
-    key: 'bebas-inter',
-    label: 'Bebas Neue / Inter',
-    display: 'BebasNeue_400Regular',
-    body: 'Inter_500Medium',
-    bodyBold: 'Inter_700Bold',
+    key: "bebas-inter",
+    label: "Bebas Neue / Inter",
+    display: "BebasNeue_400Regular",
+    body: "Inter_500Medium",
+    bodyBold: "Inter_700Bold",
   },
   {
-    key: 'grotesk',
-    label: 'Space Grotesk',
-    display: 'SpaceGrotesk_700Bold',
-    body: 'SpaceGrotesk_500Medium',
-    bodyBold: 'SpaceGrotesk_700Bold',
+    key: "grotesk",
+    label: "Space Grotesk",
+    display: "SpaceGrotesk_700Bold",
+    body: "SpaceGrotesk_500Medium",
+    bodyBold: "SpaceGrotesk_700Bold",
   },
 ];
 
@@ -65,38 +65,111 @@ export function getFontSet(key) {
 
 export const PALETTE_OPTIONS = [
   {
-    // Paleta assinatura do Iron Log: lima elétrico sobre carvão profundo.
-    // Lê-se como performance/tecnologia em vez de "app de ginásio genérica".
-    // Em modo claro o lima puro não tem contraste suficiente sobre branco,
-    // por isso desce para um verde-oliva escuro que mantém a mesma família.
-    key: 'iron',
-    label: 'Iron (lima elétrico)',
-    light: { strength: '#4A7A00', cardio: '#00806A', gold: '#A86B00', info: '#4A55C7' },
-    dark: { strength: '#CDFF47', cardio: '#00E5A0', gold: '#FFC848', info: '#8B9BFF' },
+    // Assinatura Iron Log: lima elétrico sobre carvão profundo.
+    key: "iron",
+    label: "Iron (lima elétrico)",
+    light: {
+      strength: "#4A7A00",
+      cardio: "#00806A",
+      gold: "#A86B00",
+      info: "#4A55C7",
+    },
+    dark: {
+      strength: "#CDFF47",
+      cardio: "#00E5A0",
+      gold: "#FFC848",
+      info: "#8B9BFF",
+    },
   },
+
   {
-    key: 'inferno',
-    label: 'Inferno (laranja & vermelho)',
-    light: { strength: '#FF3D00', cardio: '#00C853', gold: '#FFAB00', info: '#D50000' },
-    dark: { strength: '#FF6E40', cardio: '#00E676', gold: '#FFD740', info: '#FF1744' },
+    // Energia / fogo: quente, agressiva e muito contrastante.
+    key: "inferno",
+    label: "Inferno (laranja & vermelho)",
+    light: {
+      strength: "#E53900",
+      cardio: "#008F68",
+      gold: "#C77900",
+      info: "#C62828",
+    },
+    dark: {
+      strength: "#FF7043",
+      cardio: "#00DFA0",
+      gold: "#FFCA4B",
+      info: "#FF3D5A",
+    },
   },
+
   {
-    key: 'toxic',
-    label: 'Tóxica (verde & preto)',
-    light: { strength: '#39FF14', cardio: '#00E5FF', gold: '#FFEA00', info: '#7C4DFF' },
-    dark: { strength: '#76FF03', cardio: '#18FFFF', gold: '#FFFF00', info: '#B388FF' },
+    // Neon ácido: estética mais underground / cyberpunk.
+    key: "toxic",
+    label: "Tóxica (verde & preto)",
+    light: {
+      strength: "#238A00",
+      cardio: "#008FA3",
+      gold: "#B59B00",
+      info: "#6842B8",
+    },
+    dark: {
+      strength: "#7CFF00",
+      cardio: "#00E5FF",
+      gold: "#FFE600",
+      info: "#B78AFF",
+    },
   },
+
   {
-    key: 'blood',
-    label: 'Combate (vermelho & azul-marinho)',
-    light: { strength: '#D50000', cardio: '#00838F', gold: '#0D1B4C', info: '#AA00FF' },
-    dark: { strength: '#FF1744', cardio: '#00E5FF', gold: '#5C6BC0', info: '#E040FB' },
+    // Mantida exatamente como pediste.
+    key: "blood",
+    label: "Combate (vermelho & azul-marinho)",
+    light: {
+      strength: "#D50000",
+      cardio: "#00838F",
+      gold: "#0D1B4C",
+      info: "#AA00FF",
+    },
+    dark: {
+      strength: "#FF1744",
+      cardio: "#00E5FF",
+      gold: "#5C6BC0",
+      info: "#E040FB",
+    },
   },
+
   {
-    key: 'vivid',
-    label: 'Vívida & Agressiva',
-    light: { strength: '#E60000', cardio: '#00A63E', gold: '#0B1F4B', info: '#FF6A00' },
-    dark: { strength: '#FF3B30', cardio: '#22D46B', gold: '#3B5BA5', info: '#FF8A3D' },
+    // Vívida mas mais sofisticada: vermelho, verde e laranja.
+    key: "vivid",
+    label: "Vívida & Agressiva",
+    light: {
+      strength: "#D92D20",
+      cardio: "#008A45",
+      gold: "#173B72",
+      info: "#E85D04",
+    },
+    dark: {
+      strength: "#FF453A",
+      cardio: "#32D583",
+      gold: "#4C78B8",
+      info: "#FF9F43",
+    },
+  },
+
+  {
+    // Rosa: magenta + rosa quente, com cores secundárias que combinam.
+    key: "pink",
+    label: "Rosa (magenta & coral)",
+    light: {
+      strength: "#C2185B",
+      cardio: "#008F83",
+      gold: "#B77900",
+      info: "#7B4FD3",
+    },
+    dark: {
+      strength: "#FF4F9A",
+      cardio: "#35D6C0",
+      gold: "#FFC857",
+      info: "#B78AFF",
+    },
   },
 ];
 
@@ -118,66 +191,66 @@ export function getPalette(key) {
  * ecrãs que ainda os usam.
  */
 const neutralLight = {
-  bg: '#F2F4F0',
-  bgSoft: '#E8ECE5',
-  surface: '#FFFFFF',
-  surfaceElevated: '#FFFFFF',
-  surfaceHigh: '#FFFFFF',
-  border: 'rgba(20, 30, 24, 0.10)',
-  borderStrong: 'rgba(20, 30, 24, 0.18)',
-  hairline: 'rgba(20, 30, 24, 0.07)',
-  ink: '#141A16',
-  textPrimary: '#141A16',
-  textSecondary: '#4B564E',
-  textMuted: '#7A857D',
-  muted: '#7A857D',
-  good: '#2E9E4F',
-  warning: '#B77400',
-  danger: '#C23B3B',
-  scrim: 'rgba(18, 24, 20, 0.32)',
+  bg: "#F2F4F0",
+  bgSoft: "#E8ECE5",
+  surface: "#FFFFFF",
+  surfaceElevated: "#FFFFFF",
+  surfaceHigh: "#FFFFFF",
+  border: "rgba(20, 30, 24, 0.10)",
+  borderStrong: "rgba(20, 30, 24, 0.18)",
+  hairline: "rgba(20, 30, 24, 0.07)",
+  ink: "#141A16",
+  textPrimary: "#141A16",
+  textSecondary: "#4B564E",
+  textMuted: "#7A857D",
+  muted: "#7A857D",
+  good: "#2E9E4F",
+  warning: "#B77400",
+  danger: "#C23B3B",
+  scrim: "rgba(18, 24, 20, 0.32)",
 };
 
 const neutralDark = {
-  bg: '#0E1113',
-  bgSoft: '#171B1E',
-  surface: '#171B1E',
-  surfaceElevated: '#1F2428',
-  surfaceHigh: '#272D31',
-  border: 'rgba(255, 255, 255, 0.09)',
-  borderStrong: 'rgba(255, 255, 255, 0.16)',
-  hairline: 'rgba(255, 255, 255, 0.06)',
-  ink: '#F1F4F2',
-  textPrimary: '#F1F4F2',
-  textSecondary: '#A8B2AC',
-  textMuted: '#78827C',
-  muted: '#78827C',
-  good: '#4ADE80',
-  warning: '#F0B94E',
-  danger: '#E36A6A',
-  scrim: 'rgba(0, 0, 0, 0.55)',
+  bg: "#0E1113",
+  bgSoft: "#171B1E",
+  surface: "#171B1E",
+  surfaceElevated: "#1F2428",
+  surfaceHigh: "#272D31",
+  border: "rgba(255, 255, 255, 0.09)",
+  borderStrong: "rgba(255, 255, 255, 0.16)",
+  hairline: "rgba(255, 255, 255, 0.06)",
+  ink: "#F1F4F2",
+  textPrimary: "#F1F4F2",
+  textSecondary: "#A8B2AC",
+  textMuted: "#78827C",
+  muted: "#78827C",
+  good: "#4ADE80",
+  warning: "#F0B94E",
+  danger: "#E36A6A",
+  scrim: "rgba(0, 0, 0, 0.55)",
 };
 
 // Modo "Preto" — pensado para ecrãs OLED (poupa bateria, contraste máximo).
 // Usa os mesmos acentos do modo escuro; só o fundo desce a preto puro, e as
 // superfícies sobem em degraus muito curtos para não "acender" o ecrã.
 const neutralBlack = {
-  bg: '#000000',
-  bgSoft: '#0B0C0D',
-  surface: '#0B0C0D',
-  surfaceElevated: '#141618',
-  surfaceHigh: '#1C1F21',
-  border: 'rgba(255, 255, 255, 0.10)',
-  borderStrong: 'rgba(255, 255, 255, 0.18)',
-  hairline: 'rgba(255, 255, 255, 0.06)',
-  ink: '#F4F6F5',
-  textPrimary: '#F4F6F5',
-  textSecondary: '#A2ACA6',
-  textMuted: '#727B76',
-  muted: '#727B76',
-  good: '#4ADE80',
-  warning: '#F0B94E',
-  danger: '#E36A6A',
-  scrim: 'rgba(0, 0, 0, 0.65)',
+  bg: "#000000",
+  bgSoft: "#0B0C0D",
+  surface: "#0B0C0D",
+  surfaceElevated: "#141618",
+  surfaceHigh: "#1C1F21",
+  border: "rgba(255, 255, 255, 0.10)",
+  borderStrong: "rgba(255, 255, 255, 0.18)",
+  hairline: "rgba(255, 255, 255, 0.06)",
+  ink: "#F4F6F5",
+  textPrimary: "#F4F6F5",
+  textSecondary: "#A2ACA6",
+  textMuted: "#727B76",
+  muted: "#727B76",
+  good: "#4ADE80",
+  warning: "#F0B94E",
+  danger: "#E36A6A",
+  scrim: "rgba(0, 0, 0, 0.65)",
 };
 
 const NEUTRALS_BY_MODE = {
@@ -192,11 +265,11 @@ const NEUTRALS_BY_MODE = {
  * @param {string} paletteKey  ver PALETTE_OPTIONS
  */
 export function buildTheme(mode, fontKey, paletteKey) {
-  const safeMode = NEUTRALS_BY_MODE[mode] ? mode : 'light';
+  const safeMode = NEUTRALS_BY_MODE[mode] ? mode : "light";
   const palette = getPalette(paletteKey);
   const neutral = NEUTRALS_BY_MODE[safeMode];
   // "Preto" reaproveita os acentos do modo escuro — só o fundo muda.
-  const accents = safeMode === 'light' ? palette.light : palette.dark;
+  const accents = safeMode === "light" ? palette.light : palette.dark;
   const colors = {
     ...neutral,
     ...accents,
@@ -207,7 +280,7 @@ export function buildTheme(mode, fontKey, paletteKey) {
     accent2: accents.cardio,
   };
 
-  const isDark = safeMode !== 'light';
+  const isDark = safeMode !== "light";
 
   return {
     ...base,
@@ -238,10 +311,18 @@ export function buildTheme(mode, fontKey, paletteKey) {
       // ainda visível, o ponto onde o gradiente é cortado criava uma
       // aresta de cor súbita a meio do cartão.
       surfaceSheen: isDark
-        ? ['rgba(255,255,255,0.06)', 'rgba(255,255,255,0.015)', 'rgba(255,255,255,0)']
-        : ['rgba(255,255,255,0.85)', 'rgba(255,255,255,0.25)', 'rgba(255,255,255,0)'],
+        ? [
+            "rgba(255,255,255,0.06)",
+            "rgba(255,255,255,0.015)",
+            "rgba(255,255,255,0)",
+          ]
+        : [
+            "rgba(255,255,255,0.85)",
+            "rgba(255,255,255,0.25)",
+            "rgba(255,255,255,0)",
+          ],
       // Véu escuro sobre imagens/heros, para o texto se manter legível.
-      scrim: ['rgba(0,0,0,0)', 'rgba(0,0,0,0.75)'],
+      scrim: ["rgba(0,0,0,0)", "rgba(0,0,0,0.75)"],
     },
   };
 }
@@ -249,13 +330,13 @@ export function buildTheme(mode, fontKey, paletteKey) {
 /* ---------- Helpers de cor ---------- */
 
 function parseHex(hex) {
-  const h = hex.replace('#', '');
+  const h = hex.replace("#", "");
   const full =
     h.length === 3
       ? h
-          .split('')
+          .split("")
           .map((c) => c + c)
-          .join('')
+          .join("")
       : h;
   return {
     r: parseInt(full.slice(0, 2), 16),
@@ -315,7 +396,11 @@ function hslToRgb(h, s, l) {
     g = hue2rgb(p, q, h);
     b = hue2rgb(p, q, h - 1 / 3);
   }
-  return { r: Math.round(r * 255), g: Math.round(g * 255), b: Math.round(b * 255) };
+  return {
+    r: Math.round(r * 255),
+    g: Math.round(g * 255),
+    b: Math.round(b * 255),
+  };
 }
 
 /**
@@ -349,5 +434,9 @@ export function bodyFatColor(bf, gender, colors) {
   if (bf == null) return colors.muted;
   const low = gender ? 7 : 13;
   const high = gender ? 28 : 35;
-  return interpolateColor(colors.good, colors.danger, (bf - low) / (high - low));
+  return interpolateColor(
+    colors.good,
+    colors.danger,
+    (bf - low) / (high - low),
+  );
 }
