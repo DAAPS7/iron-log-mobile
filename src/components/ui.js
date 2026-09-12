@@ -459,21 +459,28 @@ export function Button({ title, onPress, variant = 'primary', disabled, loading,
   const theme = useTheme();
   const { scale, onPressIn, onPressOut } = usePressScale(!disabled && !loading, 0.955);
 
-  const isGradient = variant === 'primary' || variant === 'strength';
+  // O gradiente é usado apenas como contorno, nunca como preenchimento —
+  // botões inteiramente pintados a gradiente tornavam-se ruidosos quando
+  // apareciam vários no mesmo ecrã.
+  const gradientBorder = variant === 'primary' || variant === 'strength';
 
   const palette = {
-    primary: { fg: theme.isDark ? '#0B0F0C' : '#FFFFFF', border: 'transparent' },
-    strength: { fg: theme.isDark ? '#0B0F0C' : '#FFFFFF', border: 'transparent' },
+    primary: { bg: theme.colors.accent, fg: theme.isDark ? '#0B0F0C' : '#FFFFFF', border: 'transparent' },
+    strength: { bg: theme.colors.accent, fg: theme.isDark ? '#0B0F0C' : '#FFFFFF', border: 'transparent' },
     cardio: { bg: theme.colors.cardio, fg: theme.isDark ? '#08120F' : '#FFFFFF', border: 'transparent' },
     ghost: { bg: 'transparent', fg: theme.colors.textPrimary, border: theme.colors.borderStrong },
-    danger: { bg: withAlphaSafe(theme.colors.danger, 0.12), fg: theme.colors.danger, border: withAlphaSafe(theme.colors.danger, 0.3) },
+    danger: {
+      bg: withAlphaSafe(theme.colors.danger, 0.12),
+      fg: theme.colors.danger,
+      border: withAlphaSafe(theme.colors.danger, 0.3),
+    },
   }[variant] || { bg: 'transparent', fg: theme.colors.textPrimary, border: theme.colors.borderStrong };
 
   const content = loading ? (
-    <ActivityIndicator color={palette.fg} />
+    <ActivityIndicator color={palette.fg} size="small" />
   ) : (
-    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-      {icon ? <Text style={{ fontSize: 15 }}>{icon}</Text> : null}
+    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7 }}>
+      {icon ? <Text style={{ fontSize: 13 }}>{icon}</Text> : null}
       <Text
         numberOfLines={1}
         style={{
@@ -489,13 +496,15 @@ export function Button({ title, onPress, variant = 'primary', disabled, loading,
   );
 
   const inner = {
-    minHeight: 46,
-    paddingVertical: 13,
-    paddingHorizontal: theme.space.xl,
+    minHeight: 38,
+    paddingVertical: 9,
+    paddingHorizontal: theme.space.lg,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: theme.radii.pill,
   };
+
+  const BORDER = 1.5;
 
   return (
     <Animated.View style={[{ transform: [{ scale }], flexShrink: 0 }, style]}>
@@ -506,20 +515,29 @@ export function Button({ title, onPress, variant = 'primary', disabled, loading,
         onPressOut={onPressOut}
         style={{ opacity: disabled ? 0.4 : 1, borderRadius: theme.radii.pill, overflow: 'hidden' }}
       >
-        {isGradient ? (
+        {gradientBorder ? (
+          // O contorno em gradiente é o próprio LinearGradient a servir de
+          // fundo, com o corpo sólido por cima deixando uma margem fina.
           <LinearGradient
             colors={theme.gradients.accent}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
-            style={inner}
+            style={{ padding: BORDER, borderRadius: theme.radii.pill }}
           >
-            {content}
+            <View
+              style={[
+                inner,
+                { backgroundColor: palette.bg, borderRadius: theme.radii.pill },
+              ]}
+            >
+              {content}
+            </View>
           </LinearGradient>
         ) : (
           <View
             style={[
               inner,
-              { backgroundColor: palette.bg, borderWidth: 1.5, borderColor: palette.border },
+              { backgroundColor: palette.bg, borderWidth: BORDER, borderColor: palette.border },
             ]}
           >
             {content}
@@ -577,8 +595,8 @@ export function Input(props) {
           // deslocar nada no layout.
           borderColor: focused ? theme.colors.accent : theme.colors.border,
           borderRadius: theme.radii.md,
-          paddingHorizontal: theme.space.lg,
-          paddingVertical: 13,
+          paddingHorizontal: theme.space.md,
+          paddingVertical: 11,
           fontFamily: theme.font.body,
           fontSize: 16, // 16 evita o zoom automático de alguns teclados
           color: theme.colors.textPrimary,
@@ -609,7 +627,11 @@ export function SegmentedControl({ options, value, onChange }) {
     }).start();
   }, [index]);
 
-  const segment = width ? width / options.length : 0;
+  // A largura útil desconta a margem interna dos dois lados. Sem isto o
+  // indicador vai-se desalinhando de opção para opção (nota-se sobretudo
+  // com 3+ opções, onde a última fica claramente fora do sítio).
+  const PAD = 4;
+  const segment = width ? (width - PAD * 2) / options.length : 0;
 
   return (
     <View
@@ -620,7 +642,7 @@ export function SegmentedControl({ options, value, onChange }) {
         backgroundColor: theme.isDark ? theme.colors.bg : theme.colors.bgSoft,
         borderWidth: 1,
         borderColor: theme.colors.border,
-        padding: 4,
+        padding: PAD,
         overflow: 'hidden',
       }}
     >
@@ -628,10 +650,10 @@ export function SegmentedControl({ options, value, onChange }) {
         <Animated.View
           style={{
             position: 'absolute',
-            top: 4,
-            bottom: 4,
-            left: 4,
-            width: segment - 2,
+            top: PAD,
+            bottom: PAD,
+            left: PAD,
+            width: segment,
             borderRadius: theme.radii.pill,
             backgroundColor: theme.colors.accent,
             transform: [
@@ -654,8 +676,8 @@ export function SegmentedControl({ options, value, onChange }) {
             style={{
               flex: 1,
               minWidth: 0,
-              paddingVertical: 9,
-              paddingHorizontal: 6,
+              paddingVertical: 8,
+              paddingHorizontal: 4,
               alignItems: 'center',
             }}
           >

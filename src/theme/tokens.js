@@ -50,7 +50,7 @@ export const TYPE = {
   secondary: { fontSize: 13, lineHeight: 18, letterSpacing: 0 },
   caption: { fontSize: 11, lineHeight: 15, letterSpacing: 0.3 },
   label: { fontSize: 11, lineHeight: 14, letterSpacing: 0.8 },
-  button: { fontSize: 14, lineHeight: 18, letterSpacing: 0.4 },
+  button: { fontSize: 12.5, lineHeight: 16, letterSpacing: 0.5 },
   numericLg: { fontSize: 44, lineHeight: 46, letterSpacing: -1.8 },
   numericMd: { fontSize: 28, lineHeight: 30, letterSpacing: -1 },
   numericSm: { fontSize: 19, lineHeight: 22, letterSpacing: -0.4 },

@@ -133,22 +133,28 @@ export default function HeroCard({
                 transform: [{ scale: pressed ? 0.97 : 1 }],
               })}
             >
+              {/* Preenchimento sólido; o gradiente fica só no contorno, como
+                  em todos os botões da app. */}
               <LinearGradient
                 colors={theme.gradients.accent}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
+                style={{ padding: 1.5, borderRadius: theme.radii.pill }}
+              >
+              <View
                 style={{
                   flexDirection: 'row',
                   alignItems: 'center',
-                  gap: 8,
-                  paddingVertical: 13,
-                  paddingHorizontal: theme.space.xl,
+                  gap: 7,
+                  paddingVertical: 9,
+                  paddingHorizontal: theme.space.lg,
                   borderRadius: theme.radii.pill,
+                  backgroundColor: theme.colors.accent,
                 }}
               >
                 <Icon
                   name={action.icon}
-                  size={18}
+                  size={16}
                   color={theme.isDark ? '#0B0F0C' : '#FFFFFF'}
                   strokeWidth={2.1}
                 />
@@ -162,6 +168,7 @@ export default function HeroCard({
                 >
                   {action.label}
                 </Text>
+              </View>
               </LinearGradient>
             </Pressable>
           ) : null}

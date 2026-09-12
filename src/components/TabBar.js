@@ -19,6 +19,9 @@ import Icon from './Icon';
 import { useTheme } from '../context/ThemeContext';
 import { MAX_CONTENT_WIDTH } from './ui';
 
+// Margem de cada lado do indicador, dentro do seu segmento.
+const INDICATOR_INSET = 6;
+
 const TAB_ICONS = {
   Perfil: 'profile',
   Treinos: 'dumbbell',
@@ -50,8 +53,9 @@ function TabItem({ route, isFocused, onPress, label }) {
         flex: 1,
         alignItems: 'center',
         justifyContent: 'center',
-        paddingVertical: 8,
-        minHeight: 48,
+        paddingVertical: 7,
+        paddingHorizontal: 2,
+        minHeight: 52,
       }}
     >
       <Animated.View
@@ -65,18 +69,23 @@ function TabItem({ route, isFocused, onPress, label }) {
       >
         <Icon
           name={TAB_ICONS[route.name] || 'spark'}
-          size={22}
+          size={21}
           color={isFocused ? theme.colors.accent : theme.colors.textMuted}
           strokeWidth={isFocused ? 2.1 : 1.7}
         />
         <Text
           numberOfLines={1}
+          // Com 5 tabs, num ecrã de 360px cada uma tem ~66px. O tamanho e
+          // o espaçamento são o máximo que deixa "Histórico" caber inteiro.
+          adjustsFontSizeToFit
+          minimumFontScale={0.85}
           style={{
             fontFamily: theme.font.bodyBold,
-            fontSize: 9.5,
-            letterSpacing: 0.4,
+            fontSize: 9,
+            letterSpacing: 0.2,
             textTransform: 'uppercase',
             marginTop: 4,
+            textAlign: 'center',
             color: isFocused ? theme.colors.accent : theme.colors.textMuted,
           }}
         >
@@ -157,8 +166,8 @@ export default function TabBar({ state, descriptors, navigation }) {
               position: 'absolute',
               top: 6,
               bottom: 6,
-              width: segment - 10,
-              left: 5,
+              width: segment - INDICATOR_INSET * 2,
+              left: INDICATOR_INSET,
               borderRadius: theme.radii.lg,
               backgroundColor: theme.isDark
                 ? 'rgba(255,255,255,0.07)'
