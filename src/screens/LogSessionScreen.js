@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { Modal, Pressable, Text, View } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { Animated, Easing, Modal, Pressable, Text, View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import {
@@ -10,9 +10,13 @@ import {
   Field,
   Input,
   Note,
+  ProgressBar,
   Screen,
   SegmentedControl,
 } from '../components/ui';
+import RestTimer from '../components/RestTimer';
+import SessionHeader from '../components/SessionHeader';
+import Icon from '../components/Icon';
 import { useStore } from '../context/StoreContext';
 import { useTheme } from '../context/ThemeContext';
 import { todayLocal } from '../lib/date';
@@ -51,6 +55,9 @@ function toSessionExercise(ex) {
 export default function LogSessionScreen({ route, navigation }) {
   const theme = useTheme();
   const { data, updateData } = useStore();
+  // Momento em que a última série de trabalho foi registada; alimenta o
+  // cronómetro de descanso. null = sem descanso a decorrer.
+  const [restStartedAt, setRestStartedAt] = useState(null);
 
   const workoutId = route.params?.workoutId || null;
   const isFree = !!route.params?.free;
@@ -169,6 +176,12 @@ export default function LogSessionScreen({ route, navigation }) {
         i === exIndex ? { ...ex, sets: [...ex.sets, setStr] } : ex,
       ),
     }));
+    // O descanso só faz sentido depois de uma série de trabalho — depois de
+    // um aquecimento passa-se logo à seguinte. Em modo de edição também
+    // não, porque aí não se está a treinar.
+    if (!isWarmupSet(setStr) && !editingLogId) {
+      setRestStartedAt(Date.now());
+    }
   }
 
   function removeSet(exIndex, setIndex) {
@@ -266,13 +279,37 @@ export default function LogSessionScreen({ route, navigation }) {
     navigation.goBack();
   }
 
+  // Progresso global da sessão — só séries de trabalho contam para o alvo.
+  const sessionStats = React.useMemo(() => {
+    let completed = 0;
+    let target = 0;
+    let exercisesDone = 0;
+    session.exercises.forEach((ex) => {
+      const working = ex.sets.filter((s) => !isWarmupSet(s)).length;
+      completed += working;
+      const exTarget = ex.targetSets || 0;
+      target += exTarget;
+      if (exTarget > 0 ? working >= exTarget : working > 0) exercisesDone += 1;
+    });
+    return { completed, target, exercisesDone, total: session.exercises.length };
+  }, [session.exercises]);
+
   return (
-    <Screen>
+    <View style={{ flex: 1, backgroundColor: theme.colors.bg }}>
+      <Screen>
+      <SessionHeader
+        title={session.workoutName || 'Treino livre'}
+        completedSets={sessionStats.completed}
+        targetSets={sessionStats.target}
+        exercisesDone={sessionStats.exercisesDone}
+        exercisesTotal={sessionStats.total}
+      />
+
       {!session.editingLogId ? (
-        <Note style={{ marginBottom: 12 }}>
-          💾 O progresso vai sendo guardado como rascunho no telemóvel (para
-          não se perder se a app fechar a meio), mas só fica registado a
-          sério quando premires "Concluir treino".
+        <Note style={{ marginBottom: theme.space.lg }}>
+          O progresso é guardado como rascunho no telemóvel (para não se
+          perder se a app fechar a meio), mas só fica registado a sério
+          quando premires "Concluir treino".
         </Note>
       ) : null}
 
@@ -327,7 +364,17 @@ export default function LogSessionScreen({ route, navigation }) {
           style={{ marginTop: 10 }}
         />
       ) : null}
-    </Screen>
+      </Screen>
+
+      {/* Fica fora do <Screen> de propósito: assim mantém-se fixo sobre o
+          conteúdo enquanto percorres a lista de exercícios. */}
+      {restStartedAt ? (
+        <RestTimer
+          startedAt={restStartedAt}
+          onDismiss={() => setRestStartedAt(null)}
+        />
+      ) : null}
+    </View>
   );
 }
 
@@ -395,64 +442,73 @@ function ExerciseLogger({ exercise: ex, onAddSet, onRemoveSet, onRemove }) {
   }
 
   return (
-    <Card>
+    <Card level={workingCount > 0 ? 'elevated' : 'surface'}>
       <View
         style={{
           flexDirection: 'row',
           justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: 4,
+          alignItems: 'flex-start',
+          marginBottom: theme.space.sm,
         }}
       >
-        <Body style={{ fontFamily: theme.font.bodyBold, flex: 1 }}>{ex.name}</Body>
-        <Pressable onPress={onRemove}>
-          <Text style={{ color: theme.colors.muted, fontSize: 16 }}>✕</Text>
+        <View style={{ flex: 1, paddingRight: theme.space.md }}>
+          <Text
+            style={{
+              fontFamily: theme.font.display,
+              ...theme.type.h3,
+              color: theme.colors.textPrimary,
+            }}
+          >
+            {ex.name}
+          </Text>
+          <Note style={{ marginTop: 3 }}>
+            {target}
+            {ex.targetSets ? ` · ${workingCount}/${ex.targetSets} feitas` : ''}
+            {ex.targetWarmupSets
+              ? ` · aquecimento ${warmupCount}/${ex.targetWarmupSets}`
+              : warmupCount
+                ? ` · ${warmupCount} aquecimento`
+                : ''}
+          </Note>
+        </View>
+        <Pressable onPress={onRemove} hitSlop={10}>
+          <Icon name="close" size={18} color={theme.colors.textMuted} />
         </Pressable>
       </View>
 
-      <Note>
-        {target}
-        {ex.targetSets ? ` · ${workingCount}/${ex.targetSets} feitas` : ''}
-        {ex.targetWarmupSets
-          ? ` · aquecimento ${warmupCount}/${ex.targetWarmupSets}`
-          : warmupCount
-            ? ` · ${warmupCount} aquecimento`
-            : ''}
-      </Note>
-
-      {ex.plannedNote ? (
-        <Note style={{ fontStyle: 'italic', marginTop: 4 }}>📝 {ex.plannedNote}</Note>
+      {/* Progresso deste exercício — leitura instantânea do que falta. */}
+      {ex.targetSets ? (
+        <ProgressBar
+          value={Math.min(workingCount, ex.targetSets)}
+          goal={ex.targetSets}
+          unit=""
+          height={6}
+        />
       ) : null}
 
-      <Pressable onPress={() => setHistoryOpen(true)} style={{ marginTop: 8, marginBottom: 4 }}>
-        <Note color={theme.colors.info}>
-          📊 {isStrength ? 'Últimos pesos' : 'Últimos registos'}
+      {ex.plannedNote ? (
+        <Note style={{ fontStyle: 'italic', marginTop: 4 }}>{ex.plannedNote}</Note>
+      ) : null}
+
+      <Pressable
+        onPress={() => setHistoryOpen(true)}
+        style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: theme.space.sm }}
+        hitSlop={8}
+      >
+        <Icon name="clock" size={14} color={theme.colors.accent2} />
+        <Note color={theme.colors.accent2}>
+          {isStrength ? 'Últimos pesos' : 'Últimos registos'}
         </Note>
       </Pressable>
 
       {/* Séries já registadas */}
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: theme.space.md }}>
         {ex.sets.map((s, si) => (
-          <Pressable
-            key={si}
-            onLongPress={() => onRemoveSet(si)}
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 6,
-              backgroundColor: theme.colors.bgSoft,
-              borderRadius: 999,
-              paddingVertical: 5,
-              paddingHorizontal: 12,
-            }}
-          >
-            <Note color={theme.colors.ink}>{s}</Note>
-            <Text style={{ color: theme.colors.muted, fontSize: 12 }}>✕</Text>
-          </Pressable>
+          <SetChip key={si} label={s} warmup={isWarmupSet(s)} onRemove={() => onRemoveSet(si)} />
         ))}
       </View>
       {ex.sets.length ? (
-        <Note style={{ marginTop: 4 }}>Mantém premida uma série para a remover.</Note>
+        <Note style={{ marginTop: 6 }}>Mantém premida uma série para a remover.</Note>
       ) : null}
 
       {/* Formulário de nova série */}
@@ -700,4 +756,70 @@ function ExtraExerciseAdder({ onAdd }) {
       />
     </Card>
   );
+}
+
+/**
+ * Uma série já registada. Entra com uma pequena animação de escala — é o
+ * feedback imediato de "ficou registado", sem precisar de mensagem nenhuma.
+ * As de aquecimento ficam visualmente mais discretas, porque não contam
+ * para o alvo nem para PRs.
+ */
+function SetChip({ label, warmup, onRemove }) {
+  const theme = useTheme();
+  const enter = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(enter, {
+      toValue: 1,
+      duration: theme.motion.duration.fast,
+      easing: Easing.bezier(...theme.motion.easing.spring),
+      useNativeDriver: true,
+    }).start();
+  }, []);
+
+  const tint = warmup ? theme.colors.textMuted : theme.colors.accent;
+
+  return (
+    <Animated.View
+      style={{
+        opacity: enter,
+        transform: [{ scale: enter.interpolate({ inputRange: [0, 1], outputRange: [0.82, 1] }) }],
+      }}
+    >
+      <Pressable
+        onLongPress={onRemove}
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 7,
+          backgroundColor: warmup ? 'transparent' : hexA(theme.colors.accent, 0.12),
+          borderWidth: 1,
+          borderColor: warmup ? theme.colors.border : hexA(theme.colors.accent, 0.3),
+          borderRadius: theme.radii.pill,
+          paddingVertical: 6,
+          paddingHorizontal: 12,
+        }}
+      >
+        <Icon name="check" size={13} color={tint} strokeWidth={2.4} />
+        <Text
+          style={{
+            fontFamily: theme.font.body,
+            ...theme.type.secondary,
+            color: warmup ? theme.colors.textMuted : theme.colors.textPrimary,
+          }}
+        >
+          {label}
+        </Text>
+      </Pressable>
+    </Animated.View>
+  );
+}
+
+// Aceita hex ou rgb() — os acentos podem vir nas duas formas.
+function hexA(color, alpha) {
+  if (!color) return 'transparent';
+  if (color.startsWith('rgb(')) return color.replace('rgb(', 'rgba(').replace(')', `, ${alpha})`);
+  const h = color.replace('#', '');
+  const full = h.length === 3 ? h.split('').map((c) => c + c).join('') : h;
+  return `rgba(${parseInt(full.slice(0, 2), 16)}, ${parseInt(full.slice(2, 4), 16)}, ${parseInt(full.slice(4, 6), 16)}, ${alpha})`;
 }
