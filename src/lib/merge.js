@@ -15,7 +15,7 @@ const MERGE_ARRAYS_BY_ID = [
   'mealPlans',
   'exerciseGoals',
 ];
-const MERGE_ARRAYS_BY_DATE = ['weightHistory'];
+const MERGE_ARRAYS_BY_DATE = ['weightHistory', 'creatineLog'];
 const MERGE_BEST_WEIGHT_OBJECTS = ['exercisePRs', 'prNotifyCache'];
 const MERGE_SHALLOW_OBJECTS = ['metricGoals', 'macroGoals', 'weeklySchedule'];
 const DELETABLE_FIELDS = [...MERGE_ARRAYS_BY_ID, ...MERGE_ARRAYS_BY_DATE];

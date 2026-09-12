@@ -1,46 +1,69 @@
 /**
- * Biblioteca de exercícios: lista alfabética, com badge por grupo muscular.
- * Equivalente ao modalExerciseLibrary da versão web.
+ * Biblioteca de exercícios.
+ *
+ * Dois modos de organização:
+ *  - alfabética: lista única, como antes;
+ *  - por músculo: um grupo colapsável por músculo, para navegar por zona do
+ *    corpo em vez de percorrer a lista toda.
+ *
+ * Quando recebe `onSelect`, a biblioteca funciona como seletor — tocar num
+ * exercício escolhe-o e fecha, em vez de ser só consulta. É o que o
+ * construtor de treino usa agora para escolher exercícios, em vez do
+ * dropdown simples que tinha antes.
  */
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
 
-import { Note } from './ui';
+import Icon from './Icon';
+import { Note, SegmentedControl } from './ui';
 import { useTheme } from '../context/ThemeContext';
 import { STRENGTH_EXERCISES } from '../lib/exercises';
 
 const PALETTE_KEYS = ['strength', 'cardio', 'gold', 'info'];
 
-export default function ExerciseLibraryModal({ visible, onClose }) {
+export default function ExerciseLibraryModal({ visible, onClose, onSelect, allowCustom }) {
   const theme = useTheme();
+  const [sortMode, setSortMode] = useState('muscle'); // 'muscle' | 'alpha'
+  const [openMuscle, setOpenMuscle] = useState(null);
 
-  const sorted = useMemo(
+  const alphaSorted = useMemo(
     () => [...STRENGTH_EXERCISES].sort((a, b) => a.name.localeCompare(b.name)),
     [],
   );
 
-  // Atribui uma cor consistente a cada grupo muscular, ciclando pela paleta.
+  const byMuscle = useMemo(() => {
+    const groups = {};
+    alphaSorted.forEach((ex) => {
+      if (!groups[ex.muscle]) groups[ex.muscle] = [];
+      groups[ex.muscle].push(ex);
+    });
+    return Object.entries(groups).sort((a, b) => a[0].localeCompare(b[0]));
+  }, [alphaSorted]);
+
   const muscleColors = useMemo(() => {
     const map = {};
     let i = 0;
-    sorted.forEach((ex) => {
-      if (!map[ex.muscle]) {
-        map[ex.muscle] = theme.colors[PALETTE_KEYS[i % PALETTE_KEYS.length]];
-        i++;
-      }
+    byMuscle.forEach(([muscle]) => {
+      map[muscle] = theme.colors[PALETTE_KEYS[i % PALETTE_KEYS.length]];
+      i++;
     });
     return map;
-  }, [sorted, theme.colors]);
+  }, [byMuscle, theme.colors]);
+
+  function pick(ex) {
+    if (onSelect) onSelect(ex);
+    onClose();
+  }
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' }}>
+      <View style={{ flex: 1, backgroundColor: theme.colors.scrim, justifyContent: 'flex-end' }}>
         <View
           style={{
-            backgroundColor: theme.colors.surface,
-            borderTopLeftRadius: 20,
-            borderTopRightRadius: 20,
+            backgroundColor: theme.colors.surfaceElevated,
+            borderTopLeftRadius: theme.radii.xl,
+            borderTopRightRadius: theme.radii.xl,
             maxHeight: '85%',
           }}
         >
@@ -49,64 +72,183 @@ export default function ExerciseLibraryModal({ visible, onClose }) {
               flexDirection: 'row',
               justifyContent: 'space-between',
               alignItems: 'center',
-              padding: theme.spacing.lg,
-              paddingBottom: 6,
+              padding: theme.space.lg,
+              paddingBottom: theme.space.sm,
             }}
           >
             <Text
               style={{
                 fontFamily: theme.font.display,
-                fontSize: 20,
-                color: theme.colors.ink,
-                textTransform: 'uppercase',
+                ...theme.type.h3,
+                color: theme.colors.textPrimary,
               }}
             >
               Biblioteca de Exercícios
             </Text>
-            <Pressable onPress={onClose}>
-              <Text style={{ fontSize: 18, color: theme.colors.muted }}>✕</Text>
+            <Pressable onPress={onClose} hitSlop={10}>
+              <Text style={{ fontSize: 18, color: theme.colors.textMuted }}>✕</Text>
             </Pressable>
           </View>
-          <Note style={{ paddingHorizontal: theme.spacing.lg, marginBottom: 8 }}>
-            Os exercícios de força disponíveis na app, por ordem alfabética.
-          </Note>
 
-          <ScrollView contentContainerStyle={{ padding: theme.spacing.lg, paddingTop: 0 }}>
-            {sorted.map((ex, i) => {
-              const color = muscleColors[ex.muscle];
-              return (
-                <View
-                  key={ex.name}
+          <View style={{ paddingHorizontal: theme.space.lg, marginBottom: theme.space.sm }}>
+            <SegmentedControl
+              value={sortMode}
+              onChange={setSortMode}
+              options={[
+                { value: 'muscle', label: 'Por músculo' },
+                { value: 'alpha', label: 'A-Z' },
+              ]}
+            />
+          </View>
+
+          <ScrollView contentContainerStyle={{ padding: theme.space.lg, paddingTop: 0 }}>
+            {allowCustom ? (
+              <Pressable
+                onPress={() => pick(null)}
+                style={({ pressed }) => ({
+                  paddingVertical: 12,
+                  borderBottomWidth: 1,
+                  borderBottomColor: theme.colors.hairline,
+                  opacity: pressed ? 0.6 : 1,
+                })}
+              >
+                <Text
                   style={{
-                    flexDirection: 'row',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    paddingVertical: 10,
-                    borderTopWidth: i === 0 ? 0 : 1,
-                    borderTopColor: theme.colors.bgSoft,
+                    fontFamily: theme.font.bodyBold,
+                    ...theme.type.body,
+                    color: theme.colors.accent,
                   }}
                 >
-                  <Text style={{ fontFamily: theme.font.body, color: theme.colors.ink, flex: 1 }}>
-                    {ex.name}
-                  </Text>
-                  <View
-                    style={{
-                      paddingVertical: 3,
-                      paddingHorizontal: 10,
-                      borderRadius: 999,
-                      backgroundColor: `${color}26`,
-                    }}
-                  >
-                    <Text style={{ fontFamily: theme.font.bodyBold, fontSize: 11, color }}>
-                      {ex.muscle}
-                    </Text>
-                  </View>
-                </View>
-              );
-            })}
+                  + Exercício personalizado…
+                </Text>
+              </Pressable>
+            ) : null}
+
+            {sortMode === 'alpha'
+              ? alphaSorted.map((ex, i) => (
+                  <ExerciseRow
+                    key={ex.name}
+                    exercise={ex}
+                    color={muscleColors[ex.muscle]}
+                    showTopBorder={i > 0 || allowCustom}
+                    onPress={onSelect ? () => pick(ex) : undefined}
+                  />
+                ))
+              : byMuscle.map(([muscle, list]) => {
+                  const isOpen = openMuscle === muscle;
+                  return (
+                    <View key={muscle} style={{ marginBottom: 8 }}>
+                      <Pressable
+                        onPress={() => setOpenMuscle(isOpen ? null : muscle)}
+                        style={({ pressed }) => ({
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          paddingVertical: 12,
+                          paddingHorizontal: theme.space.md,
+                          borderRadius: theme.radii.md,
+                          backgroundColor: isOpen
+                            ? theme.colors.surface
+                            : theme.colors.bgSoft,
+                          opacity: pressed ? 0.7 : 1,
+                        })}
+                      >
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                          <View
+                            style={{
+                              width: 8,
+                              height: 8,
+                              borderRadius: 4,
+                              backgroundColor: muscleColors[muscle],
+                            }}
+                          />
+                          <Text
+                            style={{
+                              fontFamily: theme.font.bodyBold,
+                              ...theme.type.body,
+                              color: theme.colors.textPrimary,
+                            }}
+                          >
+                            {muscle}
+                          </Text>
+                          <Note>({list.length})</Note>
+                        </View>
+                        <Icon
+                          name={isOpen ? 'chevronUp' : 'chevronDown'}
+                          size={16}
+                          color={theme.colors.textMuted}
+                        />
+                      </Pressable>
+
+                      {isOpen
+                        ? list.map((ex, i) => (
+                            <ExerciseRow
+                              key={ex.name}
+                              exercise={ex}
+                              color={muscleColors[ex.muscle]}
+                              showMuscleBadge={false}
+                              showTopBorder={i > 0}
+                              indent
+                              onPress={onSelect ? () => pick(ex) : undefined}
+                            />
+                          ))
+                        : null}
+                    </View>
+                  );
+                })}
           </ScrollView>
         </View>
       </View>
     </Modal>
+  );
+}
+
+function ExerciseRow({ exercise, color, onPress, showMuscleBadge = true, showTopBorder, indent }) {
+  const theme = useTheme();
+  const baseStyle = {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 11,
+    paddingLeft: indent ? theme.space.lg : 0,
+    borderTopWidth: showTopBorder ? 1 : 0,
+    borderTopColor: theme.colors.hairline,
+  };
+
+  const content = (
+    <>
+      <Text
+        style={{
+          fontFamily: theme.font.body,
+          ...theme.type.body,
+          color: theme.colors.textPrimary,
+          flex: 1,
+        }}
+      >
+        {exercise.name}
+      </Text>
+      {showMuscleBadge ? (
+        <View
+          style={{
+            paddingVertical: 3,
+            paddingHorizontal: 10,
+            borderRadius: theme.radii.pill,
+            backgroundColor: `${color}26`,
+          }}
+        >
+          <Text style={{ fontFamily: theme.font.bodyBold, fontSize: 11, color }}>
+            {exercise.muscle}
+          </Text>
+        </View>
+      ) : null}
+    </>
+  );
+
+  if (!onPress) return <View style={baseStyle}>{content}</View>;
+
+  return (
+    <Pressable onPress={onPress} style={({ pressed }) => [baseStyle, pressed ? { opacity: 0.6 } : null]}>
+      {content}
+    </Pressable>
   );
 }

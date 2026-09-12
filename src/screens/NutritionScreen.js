@@ -16,6 +16,8 @@ import {
 } from '../components/ui';
 import MealPlanBuilderModal from '../components/MealPlanBuilderModal';
 import DailySummary from '../components/DailySummary';
+import MicronutrientModal from '../components/MicronutrientModal';
+import CreatineCard from '../components/CreatineCard';
 import { confirmAsync } from '../lib/confirm';
 import { useStore } from '../context/StoreContext';
 import { useTheme } from '../context/ThemeContext';
@@ -25,11 +27,13 @@ import { computeDayTotals, computeFoodTotals, computeMealTotals, MICRO_FIELDS, p
 import * as api from '../api/client';
 
 import { formatLocalDate, todayLocal as todayISO } from '../lib/date';
+import { computeCreatineStreak, isTakenToday } from '../lib/creatine';
 
 export default function NutritionScreen() {
   const theme = useTheme();
   const { data, updateData } = useStore();
   const [date, setDate] = useState(todayISO());
+  const [microsOpen, setMicrosOpen] = useState(false);
   const [planModalOpen, setPlanModalOpen] = useState(false);
   const [editingPlan, setEditingPlan] = useState(null);
 
@@ -57,6 +61,27 @@ export default function NutritionScreen() {
 
   const waterGoalMl = recommendedWaterMl(currentWeight);
   const waterTotalMl = waterEntries.reduce((sum, w) => sum + w.ml, 0);
+
+  const creatineStreak = useMemo(
+    () => computeCreatineStreak(data.creatineLog),
+    [data.creatineLog],
+  );
+
+  function toggleCreatineToday() {
+    const today = todayISO();
+    updateData((prev) => {
+      const log = prev.creatineLog || [];
+      const already = log.some((e) => e.date === today);
+      if (already) {
+        return {
+          ...prev,
+          creatineLog: log.filter((e) => e.date !== today),
+          deletedIds: markDeleted(prev, 'creatineLog', today),
+        };
+      }
+      return { ...prev, creatineLog: [...log, { date: today }] };
+    });
+  }
 
   function addWater(ml) {
     updateData((prev) => ({
@@ -157,8 +182,6 @@ export default function NutritionScreen() {
     }));
   }
 
-  const hasMicros = MICRO_FIELDS.some((m) => totals[m.key] > 0);
-
   return (
     <Screen>
       <ScreenTitle subtitle="Regista o que comes e acompanha as tuas metas.">
@@ -173,7 +196,22 @@ export default function NutritionScreen() {
         calorieGoal={goal}
         macros={totals}
         macroGoals={macroGoals}
+        onPressMacros={() => setMicrosOpen(true)}
       />
+
+      <MicronutrientModal
+        visible={microsOpen}
+        onClose={() => setMicrosOpen(false)}
+        totals={totals}
+      />
+
+      {data.profile?.takesCreatine ? (
+        <CreatineCard
+          takenToday={isTakenToday(data.creatineLog, todayISO())}
+          streak={creatineStreak}
+          onToggle={toggleCreatineToday}
+        />
+      ) : null}
 
       <WaterCard
         totalMl={waterTotalMl}
@@ -182,24 +220,6 @@ export default function NutritionScreen() {
         onAdd={addWater}
         onReset={resetWaterDay}
       />
-
-      {hasMicros ? (
-        <Card>
-          <CardTitle>Micronutrientes do dia</CardTitle>
-          {MICRO_FIELDS.map((m) => (
-            <View
-              key={m.key}
-              style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 4 }}
-            >
-              <Note>{m.label}</Note>
-              <Note color={theme.colors.ink}>
-                {totals[m.key]}
-                {m.unit}
-              </Note>
-            </View>
-          ))}
-        </Card>
-      ) : null}
 
       <GoalsCard
         goal={goal}
@@ -344,10 +364,29 @@ export default function NutritionScreen() {
 function WaterCard({ totalMl, goalMl, hasWeight, onAdd, onReset }) {
   const theme = useTheme();
   const [custom, setCustom] = useState('');
+  const pct = goalMl ? Math.round((totalMl / goalMl) * 100) : 0;
 
   return (
     <Card accent={theme.colors.cardio}>
-      <CardTitle>Água</CardTitle>
+      <View
+        style={{
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: theme.space.sm,
+        }}
+      >
+        <CardTitle style={{ marginBottom: 0 }}>Água</CardTitle>
+        <Text
+          style={{
+            fontFamily: theme.font.display,
+            ...theme.type.numericSm,
+            color: pct >= 100 ? theme.colors.good : theme.colors.cardio,
+          }}
+        >
+          {pct}%
+        </Text>
+      </View>
       <ProgressBar value={totalMl} goal={goalMl} color={theme.colors.cardio} unit="ml" />
       <Note style={{ marginBottom: 10 }}>
         {hasWeight

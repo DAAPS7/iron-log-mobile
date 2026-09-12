@@ -29,6 +29,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 
+import Icon from './Icon';
 import { useTheme } from '../context/ThemeContext';
 
 /* ---------- Ajudas de animação ----------
@@ -649,6 +650,75 @@ export function Input(props) {
 }
 
 /** Seletor segmentado com indicador que desliza entre as opções. */
+/** Checkbox com caixa animada — usar para opções sim/não dentro de formulários. */
+export function Checkbox({ label, value, onChange, description }) {
+  const theme = useTheme();
+  const anim = useRef(new Animated.Value(value ? 1 : 0)).current;
+  const ease = useBezier(theme.motion.easing.spring);
+
+  useEffect(() => {
+    Animated.timing(anim, {
+      toValue: value ? 1 : 0,
+      duration: theme.motion.duration.fast,
+      easing: ease,
+      useNativeDriver: true,
+    }).start();
+  }, [value]);
+
+  return (
+    <Pressable
+      onPress={() => onChange(!value)}
+      style={({ pressed }) => ({
+        flexDirection: 'row',
+        alignItems: description ? 'flex-start' : 'center',
+        gap: theme.space.md,
+        paddingVertical: theme.space.sm,
+        opacity: pressed ? 0.7 : 1,
+      })}
+    >
+      <View
+        style={{
+          width: 22,
+          height: 22,
+          borderRadius: 7,
+          borderWidth: 1.5,
+          borderColor: value ? theme.colors.accent : theme.colors.borderStrong,
+          backgroundColor: value ? theme.colors.accent : 'transparent',
+          alignItems: 'center',
+          justifyContent: 'center',
+          marginTop: description ? 1 : 0,
+        }}
+      >
+        <Animated.View
+          style={{
+            opacity: anim,
+            transform: [{ scale: anim.interpolate({ inputRange: [0, 1], outputRange: [0.5, 1] }) }],
+          }}
+        >
+          <Icon name="check" size={13} color={theme.isDark ? '#0B0F0C' : '#FFFFFF'} strokeWidth={2.6} />
+        </Animated.View>
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={{ fontFamily: theme.font.body, ...theme.type.body, color: theme.colors.textPrimary }}>
+          {label}
+        </Text>
+        {description ? (
+          <Text
+            style={{
+              fontFamily: theme.font.body,
+              ...theme.type.secondary,
+              color: theme.colors.textMuted,
+              marginTop: 2,
+            }}
+          >
+            {description}
+          </Text>
+        ) : null}
+      </View>
+    </Pressable>
+  );
+}
+
 export function SegmentedControl({ options, value, onChange }) {
   const theme = useTheme();
   const index = Math.max(0, options.findIndex((o) => o.value === value));

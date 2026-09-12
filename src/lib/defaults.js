@@ -15,6 +15,7 @@ export function defaultData() {
     calorieEntries: [],
     waterEntries: [],
     exerciseGoals: [],
+    creatineLog: [],
     calorieGoal: null,
     macroGoals: { protein: null, carbs: null, fat: null },
     exercisePRs: {},
@@ -49,6 +50,7 @@ export function defaultData() {
       mealPlans: [],
       exerciseGoals: [],
       weightHistory: [],
+      creatineLog: [],
     },
   };
 }

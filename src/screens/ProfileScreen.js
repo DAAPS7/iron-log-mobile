@@ -7,6 +7,7 @@ import {
   Button,
   Card,
   CardTitle,
+  Checkbox,
   EmptyState,
   Field,
   Input,
@@ -313,6 +314,7 @@ function ProfileForm({ profile, currentWeight, onSave, onCancel }) {
   const [waist, setWaist] = useState(profile?.waist ? String(profile.waist) : '');
   const [hip, setHip] = useState(profile?.hip ? String(profile.hip) : '');
   const [weight, setWeight] = useState(currentWeight ? String(currentWeight) : '');
+  const [takesCreatine, setTakesCreatine] = useState(profile?.takesCreatine ?? false);
   const [error, setError] = useState(null);
 
   const num = (v) => {
@@ -345,6 +347,7 @@ function ProfileForm({ profile, currentWeight, onSave, onCancel }) {
         waist: num(waist),
         // A fórmula para homens não usa a anca — não a guardamos nesse caso.
         hip: gender ? null : num(hip),
+        takesCreatine,
       },
       num(weight),
     );
@@ -408,6 +411,13 @@ function ProfileForm({ profile, currentWeight, onSave, onCancel }) {
       >
         <Input value={weight} onChangeText={setWeight} keyboardType="decimal-pad" />
       </Field>
+
+      <Checkbox
+        label="Tomo creatina"
+        description="Ativa um lembrete diário e o registo de sequência na Nutrição."
+        value={takesCreatine}
+        onChange={setTakesCreatine}
+      />
 
       {error ? <Body color="#C23B3B">{error}</Body> : null}
 

@@ -14,6 +14,8 @@ import {
 } from '../components/ui';
 import { useStore } from '../context/StoreContext';
 import { useTheme } from '../context/ThemeContext';
+import ExerciseLibraryModal from '../components/ExerciseLibraryModal';
+import Icon from '../components/Icon';
 import { uid } from '../lib/defaults';
 import { STRENGTH_EXERCISES } from '../lib/exercises';
 import { DISTANCE_UNITS } from '../lib/sets';
@@ -160,13 +162,13 @@ export default function WorkoutBuilderScreen({ route, navigation }) {
           {ex.type === 'strength' ? (
             <>
               <Field label="Exercício">
-                <ExercisePicker
-                  value={ex.isCustom ? '__custom__' : ex.name}
-                  onChange={(val) => {
-                    if (val === '__custom__') {
+                <ExercisePickerField
+                  value={ex.isCustom ? null : ex.name}
+                  isCustom={ex.isCustom}
+                  onSelect={(found) => {
+                    if (!found) {
                       patch(i, { isCustom: true, name: '', muscle: null });
                     } else {
-                      const found = STRENGTH_EXERCISES.find((s) => s.name === val);
                       patch(i, {
                         isCustom: false,
                         name: found.name,
@@ -332,71 +334,47 @@ function IconAction({ label, onPress, disabled }) {
  * plataformas), mostra uma lista rolável de opções — mais previsível e mais
  * fácil de estender quando a biblioteca crescer.
  */
-function ExercisePicker({ value, onChange }) {
+/**
+ * Campo de escolha de exercício — toca para abrir a Biblioteca de
+ * Exercícios (com organização por músculo ou A-Z) em modo de seleção, em
+ * vez do dropdown simples e sem ordenação que havia antes.
+ */
+function ExercisePickerField({ value, isCustom, onSelect }) {
   const theme = useTheme();
   const [open, setOpen] = useState(false);
-  const label =
-    value === '__custom__'
-      ? 'Personalizado…'
-      : value || 'Escolher exercício';
+  const found = !isCustom && value ? STRENGTH_EXERCISES.find((s) => s.name === value) : null;
+  const label = isCustom ? 'Personalizado…' : value || 'Escolher exercício';
 
   return (
     <View>
       <Pressable
-        onPress={() => setOpen((o) => !o)}
-        style={{
+        onPress={() => setOpen(true)}
+        style={({ pressed }) => ({
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
           borderWidth: 1.5,
           borderColor: theme.colors.border,
-          borderRadius: theme.radiusSm,
-          padding: 12,
+          borderRadius: theme.radii.md,
+          paddingVertical: 11,
+          paddingHorizontal: theme.space.md,
           backgroundColor: theme.colors.surface,
-        }}
+          opacity: pressed ? 0.75 : 1,
+        })}
       >
-        <Body>{label} ▾</Body>
+        <View style={{ flex: 1 }}>
+          <Body>{label}</Body>
+          {found ? <Note style={{ marginTop: 1 }}>{found.muscle}</Note> : null}
+        </View>
+        <Icon name="chevronDown" size={16} color={theme.colors.textMuted} />
       </Pressable>
 
-      {open ? (
-        <View
-          style={{
-            borderWidth: 1.5,
-            borderColor: theme.colors.border,
-            borderRadius: theme.radiusSm,
-            marginTop: 6,
-            maxHeight: 240,
-            overflow: 'hidden',
-            backgroundColor: theme.colors.surface,
-          }}
-        >
-          <Screen scroll contentStyle={{ padding: 0 }}>
-            <Pressable
-              onPress={() => {
-                onChange('__custom__');
-                setOpen(false);
-              }}
-              style={{ padding: 12 }}
-            >
-              <Body>+ Personalizado…</Body>
-            </Pressable>
-            {STRENGTH_EXERCISES.map((s) => (
-              <Pressable
-                key={s.name}
-                onPress={() => {
-                  onChange(s.name);
-                  setOpen(false);
-                }}
-                style={{
-                  padding: 12,
-                  borderTopWidth: 1,
-                  borderTopColor: theme.colors.bgSoft,
-                }}
-              >
-                <Body>{s.name}</Body>
-                <Note>{s.muscle}</Note>
-              </Pressable>
-            ))}
-          </Screen>
-        </View>
-      ) : null}
+      <ExerciseLibraryModal
+        visible={open}
+        onClose={() => setOpen(false)}
+        allowCustom
+        onSelect={onSelect}
+      />
     </View>
   );
 }

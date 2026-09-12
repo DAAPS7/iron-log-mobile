@@ -11,6 +11,10 @@ export const MICRO_FIELDS = [
   { key: 'sugar', label: 'Açúcar', unit: 'g' },
   { key: 'saturatedFat', label: 'Gordura Saturada', unit: 'g' },
   { key: 'sodium', label: 'Sódio', unit: 'g' },
+  { key: 'cholesterol', label: 'Colesterol', unit: 'mg' },
+  { key: 'potassium', label: 'Potássio', unit: 'mg' },
+  { key: 'calcium', label: 'Cálcio', unit: 'mg' },
+  { key: 'iron', label: 'Ferro', unit: 'mg' },
 ];
 
 // Nem sempre é fácil pesar um alimento — às vezes é mais natural dizer
@@ -95,6 +99,9 @@ export function computeDayTotals(entries) {
  */
 export function parseOffProduct(p) {
   const n = p.nutriments || {};
+  // A Open Food Facts guarda estes quatro sempre em gramas, mas em
+  // quantidades tão pequenas que faz mais sentido ler em miligramas.
+  const mg = (grams) => (grams != null ? round1(grams * 1000) : 0);
   return {
     name: p.product_name,
     brand: Array.isArray(p.brands) ? p.brands[0] || '' : (p.brands || '').split(',')[0],
@@ -106,5 +113,9 @@ export function parseOffProduct(p) {
     sugar: round1(n.sugars_100g),
     saturatedFat: round1(n['saturated-fat_100g']),
     sodium: round1(n.sodium_100g),
+    cholesterol: mg(n.cholesterol_100g),
+    potassium: mg(n.potassium_100g),
+    calcium: mg(n.calcium_100g),
+    iron: mg(n.iron_100g),
   };
 }

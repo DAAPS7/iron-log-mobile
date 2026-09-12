@@ -71,6 +71,7 @@ export default function DailySummary({
   calorieGoal,
   macros,
   macroGoals,
+  onPressMacros,
 }) {
   const theme = useTheme();
   const progress = calorieGoal ? calories / calorieGoal : 0;
@@ -168,7 +169,11 @@ export default function DailySummary({
           </View>
         </ProgressRing>
 
-        <View style={{ flex: 1 }}>
+        <Pressable
+          onPress={onPressMacros}
+          disabled={!onPressMacros}
+          style={({ pressed }) => ({ flex: 1, opacity: pressed ? 0.7 : 1 })}
+        >
           <MacroBar
             label="Proteína"
             value={macros.protein}
@@ -187,7 +192,19 @@ export default function DailySummary({
             goal={macroGoals.fat}
             color={theme.colors.gold}
           />
-        </View>
+          {onPressMacros ? (
+            <Text
+              style={{
+                fontFamily: theme.font.body,
+                ...theme.type.caption,
+                color: theme.colors.textMuted,
+                marginTop: 2,
+              }}
+            >
+              Toca para ver micronutrientes ›
+            </Text>
+          ) : null}
+        </Pressable>
       </View>
 
       {calorieGoal ? (

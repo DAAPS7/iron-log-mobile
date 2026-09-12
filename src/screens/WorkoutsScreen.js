@@ -201,7 +201,6 @@ export default function WorkoutsScreen({ navigation }) {
         schedule={data.weeklySchedule}
         onSave={(next) => {
           updateData((prev) => ({ ...prev, weeklySchedule: next }));
-          setScheduleOpen(false);
         }}
       />
       <ExerciseLibraryModal visible={libraryOpen} onClose={() => setLibraryOpen(false)} />
