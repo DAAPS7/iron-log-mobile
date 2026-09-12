@@ -66,10 +66,17 @@ export function StoreProvider({ children }) {
       const res = await api.saveData(t, d, s);
       setSyncState('idle');
 
-      // Se tiveres continuado a registar coisas enquanto o pedido viajava
-      // pela rede, latest.current.data já não é o mesmo objeto que foi
-      // enviado — há uma parte nova que o servidor ainda não viu.
-      const localAdvancedDuringRequest = latest.current.data !== d;
+      // Se tiveres continuado a mexer enquanto o pedido viajava pela rede,
+      // latest.current já não é o mesmo objeto que foi enviado — há algo
+      // novo que o servidor ainda não viu.
+      //
+      // Isto tem de olhar para os DOIS lados. Só verificar os dados fazia
+      // com que trocar de tema durante uma gravação em curso revertesse a
+      // escolha: a resposta trazia as definições antigas (as que tinham
+      // sido enviadas) e essas eram aplicadas por cima das novas.
+      const dataAdvanced = latest.current.data !== d;
+      const settingsAdvanced = latest.current.settings !== s;
+      const localAdvancedDuringRequest = dataAdvanced || settingsAdvanced;
 
       // O servidor já funde isto com o que outros dispositivos possam ter
       // gravado entretanto. Aqui funde-se mais uma vez com o estado local
@@ -79,7 +86,12 @@ export function StoreProvider({ children }) {
       const mergedData = serverData
         ? mergeUserData(serverData, latest.current.data)
         : latest.current.data;
-      const mergedSettings = res && res.settings ? mergeSettings(res.settings) : latest.current.settings;
+      // As definições não se fundem campo a campo: o que vale é sempre a
+      // escolha mais recente do utilizador neste dispositivo.
+      const mergedSettings =
+        settingsAdvanced || !res?.settings
+          ? latest.current.settings
+          : mergeSettings(res.settings);
       setData(mergedData);
       setSettings(mergedSettings);
       latest.current = { ...latest.current, data: mergedData, settings: mergedSettings };

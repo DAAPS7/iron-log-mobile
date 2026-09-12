@@ -233,9 +233,13 @@ export function buildTheme(mode, fontKey, paletteKey) {
       accent: [accents.strength, accents.cardio],
       // Superfície em destaque: um brilho quase impercetível no topo do
       // cartão, que sugere luz a vir de cima.
+      //
+      // Termina em transparência TOTAL de propósito. Se acabasse numa cor
+      // ainda visível, o ponto onde o gradiente é cortado criava uma
+      // aresta de cor súbita a meio do cartão.
       surfaceSheen: isDark
-        ? ['rgba(255,255,255,0.07)', 'rgba(255,255,255,0.015)']
-        : ['rgba(255,255,255,0.9)', 'rgba(255,255,255,0.35)'],
+        ? ['rgba(255,255,255,0.06)', 'rgba(255,255,255,0.015)', 'rgba(255,255,255,0)']
+        : ['rgba(255,255,255,0.85)', 'rgba(255,255,255,0.25)', 'rgba(255,255,255,0)'],
       // Véu escuro sobre imagens/heros, para o texto se manter legível.
       scrim: ['rgba(0,0,0,0)', 'rgba(0,0,0,0.75)'],
     },

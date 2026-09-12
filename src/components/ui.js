@@ -21,6 +21,7 @@ import {
   Platform,
   Pressable,
   ScrollView,
+  StyleSheet,
   Text,
   TextInput,
   View,
@@ -251,7 +252,7 @@ export function Card({ children, accent, onPress, style, level = 'surface', padd
           colors={theme.gradients.surfaceSheen}
           start={{ x: 0, y: 0 }}
           end={{ x: 0, y: 1 }}
-          style={{ position: 'absolute', left: 0, right: 0, top: 0, height: 64, opacity: 0.5 }}
+          style={{ position: 'absolute', left: 0, right: 0, top: 0, height: 130 }}
           pointerEvents="none"
         />
         {accent ? (
@@ -495,6 +496,36 @@ export function Button({ title, onPress, variant = 'primary', disabled, loading,
     </View>
   );
 
+  /*
+   * O `style` recebido é dividido em dois:
+   *  - propriedades de espaçamento interno (padding*, minHeight) vão para o
+   *    corpo do botão, SUBSTITUINDO os valores por omissão;
+   *  - tudo o resto (margens, flex, alinhamento) fica no invólucro.
+   *
+   * Sem esta separação, um ecrã que passasse `paddingVertical: 6` estava na
+   * verdade a ACRESCENTAR 6px à volta de um botão que já tinha o seu
+   * próprio padding — era o que fazia alguns botões parecerem inchados e
+   * demasiado espaçados.
+   */
+  const flat = StyleSheet.flatten(style) || {};
+  const INNER_KEYS = [
+    'padding',
+    'paddingVertical',
+    'paddingHorizontal',
+    'paddingTop',
+    'paddingBottom',
+    'paddingLeft',
+    'paddingRight',
+    'minHeight',
+    'height',
+  ];
+  const innerOverrides = {};
+  const wrapperStyle = {};
+  Object.entries(flat).forEach(([k, v]) => {
+    if (INNER_KEYS.includes(k)) innerOverrides[k] = v;
+    else wrapperStyle[k] = v;
+  });
+
   const inner = {
     minHeight: 38,
     paddingVertical: 9,
@@ -502,12 +533,19 @@ export function Button({ title, onPress, variant = 'primary', disabled, loading,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: theme.radii.pill,
+    ...innerOverrides,
   };
+  // Se o ecrã pediu um botão compacto (padding menor) e não impôs altura,
+  // a altura mínima tem de descer também — senão o botão continuava alto e
+  // o padding pedido não tinha efeito visível.
+  if (innerOverrides.paddingVertical != null && innerOverrides.minHeight == null) {
+    inner.minHeight = Math.max(30, innerOverrides.paddingVertical * 2 + 18);
+  }
 
   const BORDER = 1.5;
 
   return (
-    <Animated.View style={[{ transform: [{ scale }], flexShrink: 0 }, style]}>
+    <Animated.View style={[{ transform: [{ scale }], flexShrink: 0 }, wrapperStyle]}>
       <Pressable
         onPress={onPress}
         disabled={disabled || loading}

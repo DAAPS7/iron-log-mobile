@@ -53,9 +53,9 @@ function TabItem({ route, isFocused, onPress, label }) {
         flex: 1,
         alignItems: 'center',
         justifyContent: 'center',
-        paddingVertical: 7,
+        paddingVertical: 9,
         paddingHorizontal: 2,
-        minHeight: 52,
+        minHeight: 60,
       }}
     >
       <Animated.View
@@ -69,7 +69,7 @@ function TabItem({ route, isFocused, onPress, label }) {
       >
         <Icon
           name={TAB_ICONS[route.name] || 'spark'}
-          size={21}
+          size={23}
           color={isFocused ? theme.colors.accent : theme.colors.textMuted}
           strokeWidth={isFocused ? 2.1 : 1.7}
         />
@@ -81,10 +81,10 @@ function TabItem({ route, isFocused, onPress, label }) {
           minimumFontScale={0.85}
           style={{
             fontFamily: theme.font.bodyBold,
-            fontSize: 9,
-            letterSpacing: 0.2,
+            fontSize: 9.5,
+            letterSpacing: 0.3,
             textTransform: 'uppercase',
-            marginTop: 4,
+            marginTop: 5,
             textAlign: 'center',
             color: isFocused ? theme.colors.accent : theme.colors.textMuted,
           }}

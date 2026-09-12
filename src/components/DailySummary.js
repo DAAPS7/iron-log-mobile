@@ -100,7 +100,7 @@ export default function DailySummary({
         colors={theme.gradients.surfaceSheen}
         start={{ x: 0, y: 0 }}
         end={{ x: 0, y: 1 }}
-        style={{ position: 'absolute', left: 0, right: 0, top: 0, height: 90 }}
+        style={{ position: 'absolute', left: 0, right: 0, top: 0, height: 170 }}
         pointerEvents="none"
       />
 

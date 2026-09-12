@@ -38,7 +38,7 @@ export default function SessionHeader({ title, completedSets, targetSets, exerci
           colors={theme.gradients.surfaceSheen}
           start={{ x: 0, y: 0 }}
           end={{ x: 0, y: 1 }}
-          style={{ position: 'absolute', left: 0, right: 0, top: 0, height: 80 }}
+          style={{ position: 'absolute', left: 0, right: 0, top: 0, height: 150 }}
           pointerEvents="none"
         />
         <View

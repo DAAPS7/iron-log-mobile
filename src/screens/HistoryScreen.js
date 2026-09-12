@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import { Body, Button, Card, EmptyState, Note, Screen, ScreenTitle } from '../components/ui';
+import Icon from '../components/Icon';
 import { useStore } from '../context/StoreContext';
 import { useTheme } from '../context/ThemeContext';
 import { confirmAsync } from '../lib/confirm';
@@ -78,30 +79,61 @@ export default function HistoryScreen({ navigation }) {
           const isOpen = open.has(group.name);
           return (
             <View key={group.name} style={{ marginBottom: theme.spacing.lg }}>
+              {/* Cabeçalho do grupo: é uma superfície própria (em vez de só
+                  uma linha de texto com um traço por baixo), para se ler
+                  claramente como algo tocável e para o estado aberto ser
+                  óbvio. */}
               <Pressable
                 onPress={() => toggle(group.name)}
-                style={{
+                style={({ pressed }) => ({
                   flexDirection: 'row',
                   justifyContent: 'space-between',
                   alignItems: 'center',
-                  paddingBottom: 10,
-                  borderBottomWidth: 2,
-                  borderBottomColor: theme.colors.border,
-                  marginBottom: 10,
-                }}
+                  gap: theme.space.md,
+                  paddingVertical: theme.space.md,
+                  paddingHorizontal: theme.space.lg,
+                  borderRadius: theme.radii.md,
+                  borderWidth: 1,
+                  borderColor: isOpen ? theme.colors.borderStrong : theme.colors.border,
+                  backgroundColor: isOpen
+                    ? theme.colors.surfaceElevated
+                    : theme.colors.surface,
+                  marginBottom: isOpen ? theme.space.md : 0,
+                  opacity: pressed ? 0.75 : 1,
+                })}
               >
-                <Text
+                <View style={{ flex: 1 }}>
+                  <Text
+                    numberOfLines={1}
+                    style={{
+                      fontFamily: theme.font.display,
+                      ...theme.type.h3,
+                      color: theme.colors.textPrimary,
+                    }}
+                  >
+                    {group.name}
+                  </Text>
+                  <Note style={{ marginTop: 1 }}>
+                    {group.items.length}{' '}
+                    {group.items.length === 1 ? 'sessão' : 'sessões'}
+                  </Note>
+                </View>
+                <View
                   style={{
-                    fontFamily: theme.font.display,
-                    fontSize: 14,
-                    color: theme.colors.ink,
-                    textTransform: 'uppercase',
+                    width: 28,
+                    height: 28,
+                    borderRadius: theme.radii.pill,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: theme.colors.bgSoft,
                   }}
                 >
-                  {group.name}{' '}
-                  <Text style={{ color: theme.colors.muted }}>({group.items.length})</Text>
-                </Text>
-                <Text style={{ color: theme.colors.muted }}>{isOpen ? '▴' : '▾'}</Text>
+                  <Icon
+                    name={isOpen ? 'chevronUp' : 'chevronDown'}
+                    size={15}
+                    color={theme.colors.textSecondary}
+                  />
+                </View>
               </Pressable>
 
               {isOpen
