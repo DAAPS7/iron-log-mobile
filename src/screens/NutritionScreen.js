@@ -15,6 +15,7 @@ import {
   ScreenTitle,
 } from '../components/ui';
 import MealPlanBuilderModal from '../components/MealPlanBuilderModal';
+import DailySummary from '../components/DailySummary';
 import { confirmAsync } from '../lib/confirm';
 import { useStore } from '../context/StoreContext';
 import { useTheme } from '../context/ThemeContext';
@@ -164,43 +165,15 @@ export default function NutritionScreen() {
         Nutrição
       </ScreenTitle>
 
-      <Card>
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            marginBottom: 12,
-          }}
-        >
-          <Button title="←" variant="ghost" onPress={() => shiftDate(-1)} style={{ paddingHorizontal: 16 }} />
-          <Note>{new Date(`${date}T00:00:00`).toLocaleDateString('pt-PT')}</Note>
-          <Button title="→" variant="ghost" onPress={() => shiftDate(1)} style={{ paddingHorizontal: 16 }} />
-        </View>
-
-        <BigStat
-          value={totals.calories}
-          unit={goal ? `kcal de ${goal}` : 'kcal'}
-          color={theme.colors.gold}
-        />
-        {goal ? (
-          <View style={{ marginTop: 10 }}>
-            <ProgressBar value={totals.calories} goal={goal} color={theme.colors.gold} unit="" />
-            <Note>
-              {totals.calories <= goal
-                ? `Faltam ${goal - totals.calories} kcal para a meta.`
-                : `${totals.calories - goal} kcal acima da meta.`}
-            </Note>
-          </View>
-        ) : null}
-      </Card>
-
-      <Card>
-        <CardTitle>Macros do dia</CardTitle>
-        <ProgressBar label="Proteína" value={totals.protein} goal={macroGoals.protein} color={theme.colors.strength} />
-        <ProgressBar label="Hidratos" value={totals.carbs} goal={macroGoals.carbs} color={theme.colors.cardio} />
-        <ProgressBar label="Gordura" value={totals.fat} goal={macroGoals.fat} color={theme.colors.gold} />
-      </Card>
+      <DailySummary
+        date={date}
+        isToday={date === todayISO()}
+        onShiftDate={shiftDate}
+        calories={totals.calories}
+        calorieGoal={goal}
+        macros={totals}
+        macroGoals={macroGoals}
+      />
 
       <WaterCard
         totalMl={waterTotalMl}

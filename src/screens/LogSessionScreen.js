@@ -14,6 +14,7 @@ import {
   Screen,
   SegmentedControl,
 } from '../components/ui';
+import PRCelebration from '../components/PRCelebration';
 import RestTimer from '../components/RestTimer';
 import SessionHeader from '../components/SessionHeader';
 import Icon from '../components/Icon';
@@ -25,6 +26,7 @@ import { confirmAsync, notify } from '../lib/confirm';
 import {
   DISTANCE_UNITS,
   WEIGHT_UNITS,
+  detectNewPR,
   formatCardioSet,
   formatMinSec,
   formatStrengthSet,
@@ -58,6 +60,8 @@ export default function LogSessionScreen({ route, navigation }) {
   // Momento em que a última série de trabalho foi registada; alimenta o
   // cronómetro de descanso. null = sem descanso a decorrer.
   const [restStartedAt, setRestStartedAt] = useState(null);
+  // PR acabado de bater, a mostrar na celebração. null = nada a mostrar.
+  const [newPR, setNewPR] = useState(null);
 
   const workoutId = route.params?.workoutId || null;
   const isFree = !!route.params?.free;
@@ -170,6 +174,22 @@ export default function LogSessionScreen({ route, navigation }) {
   }, []);
 
   function addSet(exIndex, setStr) {
+    const exercise = session.exercises[exIndex];
+
+    // Verifica o recorde ANTES de acrescentar a série, para as séries já
+    // feitas nesta sessão contarem como referência (e não celebrar duas
+    // vezes o mesmo exercício num treino em progressão).
+    if (exercise?.type === 'strength' && !isWarmupSet(setStr) && !editingLogId) {
+      const baseline = getEffectivePR(
+        data.loggedWorkouts,
+        data.exercisePRs || {},
+        'strength',
+        exercise.name,
+      );
+      const pr = detectNewPR(setStr, exercise.sets, baseline);
+      if (pr) setNewPR({ ...pr, name: exercise.name });
+    }
+
     setSession((prev) => ({
       ...prev,
       exercises: prev.exercises.map((ex, i) =>
@@ -374,6 +394,8 @@ export default function LogSessionScreen({ route, navigation }) {
           onDismiss={() => setRestStartedAt(null)}
         />
       ) : null}
+
+      <PRCelebration pr={newPR} onDismiss={() => setNewPR(null)} />
     </View>
   );
 }

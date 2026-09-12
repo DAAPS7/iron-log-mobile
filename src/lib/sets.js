@@ -120,3 +120,31 @@ export function getEffectivePR(loggedWorkouts, manualPRs, type, name) {
   const fromSessions = computeBestFromSessions(loggedWorkouts, type, name);
   return isBetterSet(fromSessions, manual) ? fromSessions : manual;
 }
+
+/**
+ * Decide se uma série acabada de registar bate o recorde do exercício.
+ *
+ * O que conta como "recorde a bater" é o melhor entre:
+ *  - o PR já existente (histórico gravado + recorde manual), e
+ *  - as séries já feitas nesta mesma sessão, que ainda não foram gravadas.
+ *
+ * Sem a segunda parte, um treino com séries progressivamente mais pesadas
+ * dispararia a celebração várias vezes seguidas no mesmo exercício.
+ *
+ * Aquecimentos nunca contam. Devolve null quando não há recorde novo.
+ */
+export function detectNewPR(newSetStr, priorSessionSets, baselinePR) {
+  if (isWarmupSet(newSetStr)) return null;
+  const parsed = parseStrengthSet(newSetStr);
+  if (!parsed) return null;
+
+  let best = baselinePR || null;
+  (priorSessionSets || []).forEach((s) => {
+    if (isWarmupSet(s)) return;
+    const p = parseStrengthSet(s);
+    if (p && isBetterSet(p, best)) best = p;
+  });
+
+  if (!isBetterSet(parsed, best)) return null;
+  return { ...parsed, previous: best };
+}
