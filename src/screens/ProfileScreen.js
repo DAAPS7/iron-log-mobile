@@ -24,6 +24,7 @@ import HeroCard from '../components/HeroCard';
 import { useStore } from '../context/StoreContext';
 import { useTheme } from '../context/ThemeContext';
 import { todayLocal } from '../lib/date';
+import { unmarkDeleted } from '../lib/defaults';
 import { evaluateAllGoals } from '../lib/goals';
 import { computeMuscleRegionProgress } from '../lib/muscleProgress';
 import { weekdayKeyFor, WEEKDAY_LABELS } from '../lib/schedule';
@@ -121,7 +122,17 @@ export default function ProfileScreen({ navigation }) {
                 if (idx >= 0) history[idx] = { date: today, weight: newWeight };
                 else history.push({ date: today, weight: newWeight });
               }
-              return { ...prev, profile, weightHistory: history };
+              return {
+                ...prev,
+                profile,
+                weightHistory: history,
+                // Se já tinhas apagado o registo de hoje antes, isto limpa
+                // essa marca — senão a fusão seguinte apagava-o outra vez.
+                deletedIds:
+                  newWeight != null
+                    ? unmarkDeleted(prev, 'weightHistory', today)
+                    : prev.deletedIds,
+              };
             });
             setEditing(false);
           }}
@@ -189,7 +200,11 @@ export default function ProfileScreen({ navigation }) {
                   const idx = history.findIndex((w) => w.date === today);
                   if (idx >= 0) history[idx] = { date: today, weight: kg };
                   else history.push({ date: today, weight: kg });
-                  return { ...prev, weightHistory: history };
+                  return {
+                    ...prev,
+                    weightHistory: history,
+                    deletedIds: unmarkDeleted(prev, 'weightHistory', today),
+                  };
                 })
               }
             />

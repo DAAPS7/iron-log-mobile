@@ -23,7 +23,7 @@ import { confirmAsync } from '../lib/confirm';
 import { useStore } from '../context/StoreContext';
 import { useTheme } from '../context/ThemeContext';
 import { caloriesFromMacros, recommendedWaterMl } from '../lib/biometrics';
-import { uid, markDeleted } from '../lib/defaults';
+import { uid, markDeleted, unmarkDeleted } from '../lib/defaults';
 import { computeDayTotals, computeFoodTotals, computeMealTotals, MICRO_FIELDS, parseOffProduct, QUANTITY_UNITS, getQuantityUnit, quantityToGrams } from '../lib/nutrition';
 import * as api from '../api/client';
 
@@ -103,7 +103,13 @@ export default function NutritionScreen() {
           deletedIds: markDeleted(prev, 'creatineLog', today),
         };
       }
-      return { ...prev, creatineLog: [...log, { date: today }] };
+      return {
+        ...prev,
+        creatineLog: [...log, { date: today }],
+        // Limpa qualquer marca de eliminação de hoje — se tinhas desmarcado
+        // e voltaste a marcar, sem isto a fusão seguinte apagava-a de novo.
+        deletedIds: unmarkDeleted(prev, 'creatineLog', today),
+      };
     });
   }
 

@@ -15,6 +15,7 @@ import {
   Note,
   Screen,
   ScreenTitle,
+  SegmentedControl,
 } from '../components/ui';
 import { useStore } from '../context/StoreContext';
 import { useTheme } from '../context/ThemeContext';
@@ -27,6 +28,7 @@ import {
   isWarmupSet,
   parseCardioSet,
   parseStrengthSet,
+  WEIGHT_UNITS,
 } from '../lib/sets';
 
 const WEIGHT_KEY = '__weight__';
@@ -245,6 +247,23 @@ export default function ProgressScreen() {
       ) : null}
 
       {activeKey && activeKey.startsWith('strength::') ? (
+        <ManualPRCard
+          exerciseName={activeKey.split('::')[1]}
+          pr={pr}
+          manualPR={data.exercisePRs?.[`strength::${activeKey.split('::')[1]}`] || null}
+          onSave={(value) =>
+            updateData((prev) => ({
+              ...prev,
+              exercisePRs: {
+                ...prev.exercisePRs,
+                [`strength::${activeKey.split('::')[1]}`]: value,
+              },
+            }))
+          }
+        />
+      ) : null}
+
+      {activeKey && activeKey.startsWith('strength::') ? (
         <ExerciseGoalCard
           exerciseName={activeKey.split('::')[1]}
           goals={data.exerciseGoals || []}
@@ -401,6 +420,72 @@ function MetricDropdown({ options, value, onChange }) {
 }
 
 /** Objetivos de peso definidos para o exercício atual, com estado calculado. */
+/**
+ * Recorde manual — para quem já levantava antes de usar a app e quer que o
+ * PR reflita isso desde o início, em vez de partir de zero. O PR mostrado
+ * em cima continua a ser sempre o melhor entre isto e o histórico real —
+ * editar aqui só define um piso, nunca esconde um recorde mais alto já
+ * registado.
+ */
+function ManualPRCard({ exerciseName, pr, manualPR, onSave }) {
+  const theme = useTheme();
+  const [editing, setEditing] = useState(false);
+  const [weight, setWeight] = useState(manualPR ? String(manualPR.weight) : '');
+  const [reps, setReps] = useState(manualPR ? String(manualPR.reps || '') : '');
+  const [unit, setUnit] = useState(manualPR?.unit || 'kg');
+
+  function submit() {
+    const w = parseFloat(String(weight).replace(',', '.'));
+    if (isNaN(w) || w <= 0) return;
+    onSave({ weight: w, reps: parseInt(reps, 10) || null, unit });
+    setEditing(false);
+  }
+
+  return (
+    <Card>
+      <CardTitle
+        right={
+          <Button
+            title={editing ? 'Cancelar' : manualPR ? 'Editar' : '+ Já tinha PR'}
+            variant="ghost"
+            onPress={() => setEditing((e) => !e)}
+            style={{ paddingVertical: 6, paddingHorizontal: 12 }}
+          />
+        }
+      >
+        Recorde anterior à app
+      </CardTitle>
+
+      {!editing ? (
+        <Note>
+          {manualPR
+            ? `Definiste ${manualPR.weight} ${manualPR.unit}${manualPR.reps ? ` @ ${manualPR.reps} reps` : ''} como recorde anterior a usares a app.`
+            : `Se já levantavas ${exerciseName} antes de começares a registar aqui, define o teu recorde anterior — o PR mostrado em cima passa a contar com ele.`}
+        </Note>
+      ) : (
+        <View>
+          <View style={{ flexDirection: 'row', gap: 10 }}>
+            <Field label="Peso" flex>
+              <Input value={weight} onChangeText={setWeight} keyboardType="decimal-pad" />
+            </Field>
+            <Field label="Reps (opcional)" flex>
+              <Input value={reps} onChangeText={setReps} keyboardType="number-pad" />
+            </Field>
+          </View>
+          <Field label="Unidade">
+            <SegmentedControl
+              value={unit}
+              onChange={setUnit}
+              options={WEIGHT_UNITS.map((u) => ({ value: u, label: u }))}
+            />
+          </Field>
+          <Button title="Guardar" variant="strength" onPress={submit} />
+        </View>
+      )}
+    </Card>
+  );
+}
+
 function ExerciseGoalCard({ exerciseName, goals, loggedWorkouts, onAdd, onRemove }) {
   const theme = useTheme();
   const [showForm, setShowForm] = useState(false);

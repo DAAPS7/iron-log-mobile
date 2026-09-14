@@ -105,6 +105,20 @@ export function markDeleted(prev, field, key) {
   return { ...prev.deletedIds, [field]: next };
 }
 
+/**
+ * Remove uma marca de eliminação — usar sempre que voltares a adicionar
+ * algo com a mesma chave que já tinha sido apagada antes (ex: registar
+ * creatina de um dia que já tinhas desmarcado, ou peso de uma data que já
+ * tinhas apagado). Sem isto, a fusão entre dispositivos continuava a tratar
+ * essa chave como "apagada de propósito" e removia-a de volta na gravação
+ * seguinte — parecendo que a marcação "se desfazia sozinha".
+ */
+export function unmarkDeleted(prev, field, key) {
+  const current = prev.deletedIds?.[field] || [];
+  if (!current.includes(key)) return prev.deletedIds;
+  return { ...prev.deletedIds, [field]: current.filter((k) => k !== key) };
+}
+
 export function mergeSettings(incoming) {
   return { ...defaultSettings(), ...(incoming || {}) };
 }

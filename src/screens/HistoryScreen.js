@@ -5,6 +5,7 @@ import { Body, Button, Card, EmptyState, Note, Screen, ScreenTitle } from '../co
 import Icon from '../components/Icon';
 import { useStore } from '../context/StoreContext';
 import { useTheme } from '../context/ThemeContext';
+import { withAlpha } from '../theme/theme';
 import { confirmAsync } from '../lib/confirm';
 import { markDeleted } from '../lib/defaults';
 
@@ -93,8 +94,8 @@ export default function HistoryScreen({ navigation }) {
                   paddingVertical: theme.space.md,
                   paddingHorizontal: theme.space.lg,
                   borderRadius: theme.radii.md,
-                  borderWidth: 1,
-                  borderColor: isOpen ? theme.colors.borderStrong : theme.colors.border,
+                  borderWidth: 1.5,
+                  borderColor: isOpen ? theme.colors.accent : withAlpha(theme.colors.accent, 0.35),
                   backgroundColor: isOpen
                     ? theme.colors.surfaceElevated
                     : theme.colors.surface,

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
 import {
   Body,
@@ -12,6 +12,7 @@ import {
   ScreenTitle,
 } from '../components/ui';
 import WeeklyScheduleModal from '../components/WeeklyScheduleModal';
+import Icon from '../components/Icon';
 import ExerciseLibraryModal from '../components/ExerciseLibraryModal';
 import { useStore } from '../context/StoreContext';
 import { useTheme } from '../context/ThemeContext';
@@ -27,6 +28,16 @@ export default function WorkoutsScreen({ navigation }) {
   const { data, updateData } = useStore();
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [libraryOpen, setLibraryOpen] = useState(false);
+  const [openWorkouts, setOpenWorkouts] = useState(() => new Set());
+
+  function toggleWorkoutOpen(id) {
+    setOpenWorkouts((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
 
   // Ao virar a semana, verifica (uma única vez) se a semana anterior cumpriu
   // o plano por completo, e felicita o utilizador se sim.
@@ -129,69 +140,93 @@ export default function WorkoutsScreen({ navigation }) {
           message="Cria o teu primeiro treino com exercícios de força e/ou cardio."
         />
       ) : (
-        data.workouts.map((w) => (
-          <Card key={w.id}>
-            <CardTitle>{w.name}</CardTitle>
-            <Note style={{ marginBottom: 8 }}>
-              {w.exercises.length} exercício(s) · ≈{formatDuration(estimateWorkoutTime(w).totalSeconds)}
-            </Note>
-
-            {w.exercises.map((ex, i) => {
-              const warmup = ex.warmupSets ? `${ex.warmupSets}+` : '';
-              const detail =
-                ex.type === 'strength'
-                  ? `${warmup}${ex.sets}x(${ex.minReps}-${ex.maxReps})`
-                  : `${warmup}${ex.sets}x${ex.duration != null ? formatMinSec(ex.duration) : 'duração livre'}${
-                      ex.distance ? ` · ${ex.distance}${ex.distanceUnit || 'km'}` : ''
-                    }`;
-              return (
-                <View
-                  key={i}
-                  style={{
-                    flexDirection: 'row',
-                    justifyContent: 'space-between',
-                    flexWrap: 'wrap',
-                    gap: 6,
-                    paddingVertical: 7,
-                    borderTopWidth: i === 0 ? 0 : 1,
-                    borderTopColor: theme.colors.bgSoft,
-                  }}
-                >
-                  <View style={{ flex: 1, minWidth: 120 }}>
-                    <Body>{ex.name}</Body>
-                    {ex.notes ? (
-                      <Note style={{ fontStyle: 'italic' }}>📝 {ex.notes}</Note>
-                    ) : null}
-                  </View>
-                  <Note>{detail}</Note>
+        data.workouts.map((w) => {
+          const isOpen = openWorkouts.has(w.id);
+          return (
+            <Card key={w.id}>
+              <Pressable
+                onPress={() => toggleWorkoutOpen(w.id)}
+                style={({ pressed }) => ({
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  opacity: pressed ? 0.7 : 1,
+                })}
+              >
+                <View style={{ flex: 1 }}>
+                  <CardTitle style={{ marginBottom: 2 }}>{w.name}</CardTitle>
+                  <Note>
+                    {w.exercises.length} exercício(s) · ≈{formatDuration(estimateWorkoutTime(w).totalSeconds)}
+                  </Note>
                 </View>
-              );
-            })}
+                <Icon
+                  name={isOpen ? 'chevronUp' : 'chevronDown'}
+                  size={18}
+                  color={theme.colors.textMuted}
+                />
+              </Pressable>
 
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 }}>
-              <Button
-                title="Registar"
-                variant="strength"
-                onPress={() => navigation.navigate('LogSession', { workoutId: w.id })}
-                style={{ paddingVertical: 8, paddingHorizontal: 16 }}
-              />
-              <Button
-                title="Editar"
-                variant="ghost"
-                onPress={() =>
-                  navigation.navigate('WorkoutBuilder', { workoutId: w.id })
-                }
-                style={{ paddingVertical: 8, paddingHorizontal: 16 }}
-              />
-              <Button
-                title="Apagar"
-                variant="danger"
-                onPress={() => removeWorkout(w.id)}
-                style={{ paddingVertical: 8, paddingHorizontal: 16 }}
-              />
-            </View>
-          </Card>
-        ))
+              {isOpen ? (
+                <View style={{ marginTop: theme.space.sm }}>
+                  {w.exercises.map((ex, i) => {
+                    const warmup = ex.warmupSets ? `${ex.warmupSets}+` : '';
+                    const detail =
+                      ex.type === 'strength'
+                        ? `${warmup}${ex.sets}x(${ex.minReps}-${ex.maxReps})`
+                        : `${warmup}${ex.sets}x${ex.duration != null ? formatMinSec(ex.duration) : 'duração livre'}${
+                            ex.distance ? ` · ${ex.distance}${ex.distanceUnit || 'km'}` : ''
+                          }`;
+                    return (
+                      <View
+                        key={i}
+                        style={{
+                          flexDirection: 'row',
+                          justifyContent: 'space-between',
+                          flexWrap: 'wrap',
+                          gap: 6,
+                          paddingVertical: 7,
+                          borderTopWidth: i === 0 ? 0 : 1,
+                          borderTopColor: theme.colors.hairline,
+                        }}
+                      >
+                        <View style={{ flex: 1, minWidth: 120 }}>
+                          <Body>{ex.name}</Body>
+                          {ex.notes ? (
+                            <Note style={{ fontStyle: 'italic' }}>📝 {ex.notes}</Note>
+                          ) : null}
+                        </View>
+                        <Note>{detail}</Note>
+                      </View>
+                    );
+                  })}
+                </View>
+              ) : null}
+
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 }}>
+                <Button
+                  title="Registar"
+                  variant="strength"
+                  onPress={() => navigation.navigate('LogSession', { workoutId: w.id })}
+                  style={{ paddingVertical: 8, paddingHorizontal: 16 }}
+                />
+                <Button
+                  title="Editar"
+                  variant="ghost"
+                  onPress={() =>
+                    navigation.navigate('WorkoutBuilder', { workoutId: w.id })
+                  }
+                  style={{ paddingVertical: 8, paddingHorizontal: 16 }}
+                />
+                <Button
+                  title="Apagar"
+                  variant="danger"
+                  onPress={() => removeWorkout(w.id)}
+                  style={{ paddingVertical: 8, paddingHorizontal: 16 }}
+                />
+              </View>
+            </Card>
+          );
+        })
       )}
 
       <WeeklyScheduleModal
