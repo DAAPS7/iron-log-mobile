@@ -130,9 +130,9 @@ export const PALETTE_OPTIONS = [
     },
     dark: {
       strength: "#dd0933",
-      cardio: "#0125D8",
+      cardio: "#1a6fdf",
       gold: "#DE1765",
-      info: "#E040FB",
+      info: "#f36320",
     },
   },
 
