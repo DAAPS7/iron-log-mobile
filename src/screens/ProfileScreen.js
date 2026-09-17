@@ -182,10 +182,10 @@ export default function ProfileScreen({ navigation }) {
             </Note>
           </Card>
 
-          <Card accent={theme.colors.cardio}>
+          <Card accent={theme.colors.accent2}>
             <Pressable onPress={() => setOpenMetric('weight')}>
               <CardTitle>Peso Atual</CardTitle>
-              <BigStat value={weight ?? '—'} unit="kg" color={theme.colors.cardio} />
+              <BigStat value={weight ?? '—'} unit="kg" color={theme.colors.accent2} />
               <Note style={{ marginTop: 6 }}>Toca para veres insights e definires uma meta.</Note>
             </Pressable>
           </Card>
@@ -210,7 +210,7 @@ export default function ProfileScreen({ navigation }) {
             />
           </Card>
 
-          <Card accent={theme.colors.gold}>
+          <Card accent={theme.colors.highlight}>
             <CardTitle
               right={
                 <Button

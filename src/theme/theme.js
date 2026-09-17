@@ -63,6 +63,15 @@ export function getFontSet(key) {
  * combinação de paleta + tema.
  */
 
+// Cada acento tem um nome que descreve a sua FUNÇÃO na interface, não a sua
+// aparência:
+//   strength  → acento principal da marca (CTAs, foco, seleção) — também
+//               usado para elementos de domínio "força"
+//   cardio    → acento secundário da marca — também usado para elementos
+//               de domínio "cardio"
+//   highlight → destaque para algo notável/celebrado (recordes, streaks,
+//               itens pendentes) — antigo "gold"
+//   info      → estados informativos/neutros (descanso, em curso, métricas)
 export const PALETTE_OPTIONS = [
   {
     // Assinatura Iron Log: lima elétrico sobre carvão profundo.
@@ -71,13 +80,13 @@ export const PALETTE_OPTIONS = [
     light: {
       strength: "#4A7A00",
       cardio: "#00806A",
-      gold: "#A86B00",
+      highlight: "#A86B00",
       info: "#4A55C7",
     },
     dark: {
       strength: "#CDFF47",
       cardio: "#00E5A0",
-      gold: "#FFC848",
+      highlight: "#FFC848",
       info: "#8B9BFF",
     },
   },
@@ -89,13 +98,13 @@ export const PALETTE_OPTIONS = [
     light: {
       strength: "#E53900",
       cardio: "#008F68",
-      gold: "#C77900",
+      highlight: "#C77900",
       info: "#C62828",
     },
     dark: {
       strength: "#FF7043",
       cardio: "#00DFA0",
-      gold: "#FFCA4B",
+      highlight: "#FFCA4B",
       info: "#FF3D5A",
     },
   },
@@ -107,13 +116,13 @@ export const PALETTE_OPTIONS = [
     light: {
       strength: "#238A00",
       cardio: "#008FA3",
-      gold: "#B59B00",
+      highlight: "#B59B00",
       info: "#6842B8",
     },
     dark: {
       strength: "#7CFF00",
       cardio: "#00E5FF",
-      gold: "#FFE600",
+      highlight: "#FFE600",
       info: "#B78AFF",
     },
   },
@@ -125,13 +134,13 @@ export const PALETTE_OPTIONS = [
     light: {
       strength: "#fb0808",
       cardio: "#2adbeb",
-      gold: "#0D1B4C",
+      highlight: "#0D1B4C",
       info: "#AA00FF",
     },
     dark: {
       strength: "#dd0933",
       cardio: "#1a6fdf",
-      gold: "#DE1765",
+      highlight: "#DE1765",
       info: "#f36320",
     },
   },
@@ -143,13 +152,13 @@ export const PALETTE_OPTIONS = [
     light: {
       strength: "#D92D20",
       cardio: "#008A45",
-      gold: "#173B72",
+      highlight: "#173B72",
       info: "#E85D04",
     },
     dark: {
       strength: "#FF453A",
       cardio: "#32D583",
-      gold: "#4C78B8",
+      highlight: "#4C78B8",
       info: "#FF9F43",
     },
   },
@@ -161,13 +170,13 @@ export const PALETTE_OPTIONS = [
     light: {
       strength: "#C2185B",
       cardio: "#008F83",
-      gold: "#B77900",
+      highlight: "#B77900",
       info: "#7B4FD3",
     },
     dark: {
       strength: "#FF4F9A",
       cardio: "#35D6C0",
-      gold: "#FFC857",
+      highlight: "#FFC857",
       info: "#B78AFF",
     },
   },
@@ -207,6 +216,9 @@ const neutralLight = {
   good: "#2E9E4F",
   warning: "#B77400",
   danger: "#C23B3B",
+  // Independente da paleta escolhida: a água mantém sempre a mesma
+  // identidade de azul, só varia entre modo claro e escuro.
+  water: "#1E7FC2",
   scrim: "rgba(18, 24, 20, 0.32)",
 };
 
@@ -227,6 +239,7 @@ const neutralDark = {
   good: "#4ADE80",
   warning: "#F0B94E",
   danger: "#E36A6A",
+  water: "#4FB4EF",
   scrim: "rgba(0, 0, 0, 0.55)",
 };
 
@@ -250,6 +263,7 @@ const neutralBlack = {
   good: "#4ADE80",
   warning: "#F0B94E",
   danger: "#E36A6A",
+  water: "#4FB4EF",
   scrim: "rgba(0, 0, 0, 0.65)",
 };
 
@@ -278,6 +292,9 @@ export function buildTheme(mode, fontKey, paletteKey) {
     // mas quando o que se quer é "a cor da marca" usa-se accent/accent2.
     accent: accents.strength,
     accent2: accents.cardio,
+    // `water` vive em `neutral` (independente da paleta) — garante-se aqui
+    // que o espalhar de `accents` acima nunca a substitui.
+    water: neutral.water,
   };
 
   const isDark = safeMode !== "light";

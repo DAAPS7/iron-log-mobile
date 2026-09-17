@@ -124,6 +124,7 @@ export default function LogSessionScreen({ route, navigation }) {
       }
       return {
         editingLogId,
+        loggedEntryId: editingLogId,
         workoutId: editingEntry.workoutId,
         workoutName: editingEntry.workoutName,
         date: editingEntry.date,
@@ -132,6 +133,7 @@ export default function LogSessionScreen({ route, navigation }) {
     }
     return {
       editingLogId: null,
+      loggedEntryId: null,
       workoutId,
       workoutName: workout?.name || '',
       date: todayLocal(),
@@ -147,31 +149,122 @@ export default function LogSessionScreen({ route, navigation }) {
     AsyncStorage.setItem(DRAFT_KEY, JSON.stringify(session)).catch(() => {});
   }, [session]);
 
-  // Ao abrir uma sessão nova, oferece retomar um rascunho compatível.
+  // Ao abrir uma sessão nova: 1) oferece retomar um rascunho compatível; 2)
+  // se não houver rascunho para retomar, avisa se já existir um treino
+  // registado hoje, para evitar duplicações acidentais.
   useEffect(() => {
     if (editingLogId) return;
     (async () => {
+      let resumed = false;
       try {
         const raw = await AsyncStorage.getItem(DRAFT_KEY);
-        if (!raw) return;
-        const draft = JSON.parse(raw);
-        const sameWorkout = draft.workoutId === workoutId;
-        const hasSets = draft.exercises?.some((ex) => ex.sets.length);
-        if (!sameWorkout || !hasSets) return;
-
-        const shouldResume = await confirmAsync(
-          'Registo por terminar',
-          'Tens um registo deste treino por terminar. Queres continuar de onde ficaste?',
-          'Continuar',
-        );
-        if (shouldResume) setSession(draft);
-        else await AsyncStorage.removeItem(DRAFT_KEY);
+        if (raw) {
+          const draft = JSON.parse(raw);
+          const sameWorkout = draft.workoutId === workoutId;
+          const hasSets = draft.exercises?.some((ex) => ex.sets.length);
+          if (sameWorkout && hasSets) {
+            const shouldResume = await confirmAsync(
+              'Registo por terminar',
+              'Tens um registo deste treino por terminar. Queres continuar de onde ficaste?',
+              'Continuar',
+            );
+            if (shouldResume) {
+              setSession(draft);
+              resumed = true;
+            } else {
+              await AsyncStorage.removeItem(DRAFT_KEY);
+            }
+          }
+        }
       } catch (e) {
         // rascunho ilegível — ignora
+      }
+
+      if (!resumed) {
+        const todayEntry = data.loggedWorkouts.find((lw) => lw.date === todayLocal());
+        if (todayEntry) {
+          const proceed = await confirmAsync(
+            'Já tens um treino registado hoje',
+            `Já registaste "${todayEntry.workoutName}" hoje. Queres mesmo criar outro treino para o mesmo dia?`,
+            'Criar mesmo assim',
+          );
+          if (!proceed) navigation.goBack();
+        }
       }
     })();
     // Só corre à entrada do ecrã.
   }, []);
+
+  /**
+   * Guarda de imediato o progresso da sessão em `data.loggedWorkouts` — uma
+   * série fica registada a sério assim que é adicionada, sem depender de
+   * "Concluir treino". Cria a entrada na primeira série e depois só a
+   * atualiza, reaproveitando sempre o mesmo id (guardado em
+   * `session.loggedEntryId`, que também vai para o rascunho, para uma app
+   * fechada a meio continuar a atualizar a MESMA entrada e não criar uma
+   * duplicada ao retomar).
+   *
+   * Se todas as séries forem removidas, apaga a entrada em vez de deixar um
+   * treino vazio registado.
+   */
+  function persistSetsNow(prevSession, exercises, prUpdate) {
+    const withSets = exercises.filter((ex) => ex.sets.length);
+    const existingId = prevSession.loggedEntryId;
+
+    if (!withSets.length) {
+      if (existingId) {
+        updateData((prevData) => ({
+          ...prevData,
+          loggedWorkouts: prevData.loggedWorkouts.filter((lw) => lw.id !== existingId),
+          deletedIds: markDeleted(prevData, 'loggedWorkouts', existingId),
+        }));
+      }
+      return null;
+    }
+
+    const exercisesOut = withSets.map((ex) => ({
+      name: ex.name,
+      type: ex.type,
+      muscle: ex.muscle,
+      sets: [...ex.sets],
+    }));
+    const entryId = existingId || uid();
+
+    updateData((prevData) => {
+      const alreadyExists = prevData.loggedWorkouts.some((lw) => lw.id === entryId);
+      const prNotifyCache = prUpdate
+        ? { ...prevData.prNotifyCache, [prUpdate.key]: prUpdate.value }
+        : prevData.prNotifyCache;
+
+      if (alreadyExists) {
+        return {
+          ...prevData,
+          loggedWorkouts: prevData.loggedWorkouts.map((lw) =>
+            lw.id === entryId
+              ? { ...lw, workoutName: prevSession.workoutName.trim() || 'Treino Livre', exercises: exercisesOut }
+              : lw,
+          ),
+          prNotifyCache,
+        };
+      }
+      return {
+        ...prevData,
+        loggedWorkouts: [
+          ...prevData.loggedWorkouts,
+          {
+            id: entryId,
+            workoutId: prevSession.workoutId,
+            workoutName: prevSession.workoutName.trim() || 'Treino Livre',
+            date: prevSession.editingLogId ? prevSession.date : todayLocal(),
+            exercises: exercisesOut,
+          },
+        ],
+        prNotifyCache,
+      };
+    });
+
+    return entryId;
+  }
 
   function addSet(exIndex, setStr) {
     const exercise = session.exercises[exIndex];
@@ -179,6 +272,7 @@ export default function LogSessionScreen({ route, navigation }) {
     // Verifica o recorde ANTES de acrescentar a série, para as séries já
     // feitas nesta sessão contarem como referência (e não celebrar duas
     // vezes o mesmo exercício num treino em progressão).
+    let prUpdate = null;
     if (exercise?.type === 'strength' && !isWarmupSet(setStr) && !editingLogId) {
       const baseline = getEffectivePR(
         data.loggedWorkouts,
@@ -187,15 +281,31 @@ export default function LogSessionScreen({ route, navigation }) {
         exercise.name,
       );
       const pr = detectNewPR(setStr, exercise.sets, baseline);
-      if (pr) setNewPR({ ...pr, name: exercise.name });
+      if (pr) {
+        setNewPR({ ...pr, name: exercise.name });
+        // Guarda-se no cache que o servidor usa para detetar e notificar os
+        // amigos — sem isto, o backend nunca vê o PR mudar entre duas
+        // sincronizações e a notificação nunca é enviada.
+        prUpdate = {
+          key: `strength::${exercise.name}`,
+          value: { weight: pr.weight, reps: pr.reps, unit: pr.unit },
+        };
+      }
     }
 
-    setSession((prev) => ({
-      ...prev,
-      exercises: prev.exercises.map((ex, i) =>
+    setSession((prev) => {
+      const nextExercises = prev.exercises.map((ex, i) =>
         i === exIndex ? { ...ex, sets: [...ex.sets, setStr] } : ex,
-      ),
-    }));
+      );
+      // A gravação imediata só se aplica a sessões novas. A editar um
+      // registo já existente, a app volta ao comportamento de sempre:
+      // as alterações só ficam guardadas a sério ao premir "Guardar
+      // alterações" — remover séries a meio de uma edição não pode apagar
+      // o treino inteiro antes de o utilizador decidir salvar.
+      if (prev.editingLogId) return { ...prev, exercises: nextExercises };
+      const nextEntryId = persistSetsNow(prev, nextExercises, prUpdate);
+      return { ...prev, exercises: nextExercises, loggedEntryId: nextEntryId };
+    });
     // O descanso só faz sentido depois de uma série de trabalho — depois de
     // um aquecimento passa-se logo à seguinte. Em modo de edição também
     // não, porque aí não se está a treinar.
@@ -205,14 +315,16 @@ export default function LogSessionScreen({ route, navigation }) {
   }
 
   function removeSet(exIndex, setIndex) {
-    setSession((prev) => ({
-      ...prev,
-      exercises: prev.exercises.map((ex, i) =>
+    setSession((prev) => {
+      const nextExercises = prev.exercises.map((ex, i) =>
         i === exIndex
           ? { ...ex, sets: ex.sets.filter((_, s) => s !== setIndex) }
           : ex,
-      ),
-    }));
+      );
+      if (prev.editingLogId) return { ...prev, exercises: nextExercises };
+      const nextEntryId = persistSetsNow(prev, nextExercises, null);
+      return { ...prev, exercises: nextExercises, loggedEntryId: nextEntryId };
+    });
   }
 
   function addExtraExercise(type, name) {
@@ -244,41 +356,50 @@ export default function LogSessionScreen({ route, navigation }) {
       notify('Nada registado', 'Regista pelo menos uma série.');
       return;
     }
+    // As séries já foram guardadas progressivamente à medida que foram
+    // registadas (ver persistSetsNow em addSet/removeSet) — aqui só falta
+    // garantir que o nome/data editados manualmente no fim ficam
+    // sincronizados com a entrada já criada.
     const exercisesOut = withSets.map((ex) => ({
       name: ex.name,
       type: ex.type,
       muscle: ex.muscle,
       sets: [...ex.sets],
     }));
-
-    if (session.editingLogId) {
+    const entryId = session.loggedEntryId;
+    if (entryId) {
       updateData((prev) => ({
         ...prev,
         loggedWorkouts: prev.loggedWorkouts.map((lw) =>
-          lw.id === session.editingLogId
+          lw.id === entryId
             ? {
                 ...lw,
                 workoutName: session.workoutName.trim() || 'Treino Livre',
-                date: session.date,
+                date: session.editingLogId ? session.date : lw.date,
                 exercises: exercisesOut,
               }
             : lw,
         ),
       }));
     } else {
-      const entry = {
-        id: uid(),
-        workoutId: session.workoutId,
-        workoutName: session.workoutName.trim() || 'Treino Livre',
-        date: todayLocal(),
-        exercises: exercisesOut,
-      };
+      // Salvaguarda para um rascunho antigo, gravado antes desta gravação
+      // progressiva existir (sem loggedEntryId) — cria a entrada agora, tal
+      // como a app fazia antes.
       updateData((prev) => ({
         ...prev,
-        loggedWorkouts: [...prev.loggedWorkouts, entry],
+        loggedWorkouts: [
+          ...prev.loggedWorkouts,
+          {
+            id: uid(),
+            workoutId: session.workoutId,
+            workoutName: session.workoutName.trim() || 'Treino Livre',
+            date: session.editingLogId ? session.date : todayLocal(),
+            exercises: exercisesOut,
+          },
+        ],
       }));
-      await AsyncStorage.removeItem(DRAFT_KEY);
     }
+    if (!session.editingLogId) await AsyncStorage.removeItem(DRAFT_KEY);
     navigation.goBack();
   }
 
@@ -370,11 +491,18 @@ export default function LogSessionScreen({ route, navigation }) {
 
       <ExtraExerciseAdder onAdd={addExtraExercise} />
 
-      <Button
-        title={session.editingLogId ? 'Guardar alterações' : 'Concluir treino'}
-        variant="primary"
-        onPress={finish}
-      />
+      {/* Ação principal do ecrã — tem de se destacar claramente de todos os
+          outros botões (adicionar série, adicionar exercício, etc.), por
+          isso é maior, tem ícone e mais espaço à volta. */}
+      <View style={{ marginTop: theme.space.xl }}>
+        <Button
+          title={session.editingLogId ? 'Guardar alterações' : 'Concluir treino'}
+          variant="primary"
+          icon={session.editingLogId ? undefined : '✅'}
+          onPress={finish}
+          style={{ minHeight: 58, paddingVertical: 16 }}
+        />
+      </View>
 
       {session.editingLogId ? (
         <Button
@@ -403,7 +531,7 @@ export default function LogSessionScreen({ route, navigation }) {
 /** Um exercício dentro da sessão: alvo, séries feitas e formulário. */
 function ExerciseLogger({ exercise: ex, onAddSet, onRemoveSet, onRemove }) {
   const theme = useTheme();
-  const { data } = useStore();
+  const { data, settings } = useStore();
   const isStrength = ex.type === 'strength';
   const [historyOpen, setHistoryOpen] = useState(false);
 
@@ -415,7 +543,29 @@ function ExerciseLogger({ exercise: ex, onAddSet, onRemoveSet, onRemove }) {
   const [distance, setDistance] = useState('');
   const [distanceUnit, setDistanceUnit] = useState(ex.targetDistanceUnit || 'km');
   const [notes, setNotes] = useState('');
-  const [warmup, setWarmup] = useState(false);
+
+  const workingCount = ex.sets.filter((s) => !isWarmupSet(s)).length;
+  const warmupCount = ex.sets.length - workingCount;
+
+  // Enquanto o exercício ainda tiver aquecimentos por fazer (segundo o
+  // plano), a tickbox vem pré-marcada — controlado pela opção nas
+  // Definições. Reage ao número de aquecimentos já feitos, para se
+  // desmarcar sozinha assim que a meta for atingida.
+  const autoWarmupEnabled = settings?.autoWarmupDefault !== false;
+  const remainingWarmups = ex.targetWarmupSets != null
+    ? Math.max(0, ex.targetWarmupSets - warmupCount)
+    : 0;
+  const [warmup, setWarmup] = useState(() => autoWarmupEnabled && remainingWarmups > 0);
+  const [warmupTouched, setWarmupTouched] = useState(false);
+
+  useEffect(() => {
+    // Só reaplica o valor por omissão se o utilizador não tiver acabado de
+    // mexer manualmente na tickbox para esta série ainda por submeter —
+    // caso contrário a escolha dele seria sempre substituída.
+    if (warmupTouched) return;
+    setWarmup(autoWarmupEnabled && remainingWarmups > 0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [remainingWarmups, autoWarmupEnabled]);
 
   const warmupPrefix = ex.targetWarmupSets ? `${ex.targetWarmupSets}+` : '';
   const hasTarget = ex.targetSets != null;
@@ -426,9 +576,6 @@ function ExerciseLogger({ exercise: ex, onAddSet, onRemoveSet, onRemove }) {
       : `Alvo: ${warmupPrefix}${ex.targetSets}x${ex.duration != null ? formatMinSec(ex.duration) : 'duração livre'}${
           ex.targetDistance ? ` · ${ex.targetDistance}${ex.targetDistanceUnit}` : ''
         }`;
-
-  const workingCount = ex.sets.filter((s) => !isWarmupSet(s)).length;
-  const warmupCount = ex.sets.length - workingCount;
 
   function submit() {
     if (isStrength) {
@@ -460,7 +607,11 @@ function ExerciseLogger({ exercise: ex, onAddSet, onRemoveSet, onRemove }) {
     setSeconds('');
     setDistance('');
     setNotes('');
-    setWarmup(false);
+    // Não força já o valor por omissão para false: deixa o efeito acima
+    // decidir, com base em quantos aquecimentos ainda faltam depois desta
+    // série ser contabilizada — é isso que faz a tickbox desligar-se
+    // sozinha assim que a meta de aquecimentos é atingida.
+    setWarmupTouched(false);
   }
 
   return (
@@ -606,7 +757,10 @@ function ExerciseLogger({ exercise: ex, onAddSet, onRemoveSet, onRemove }) {
         />
 
         <Pressable
-          onPress={() => setWarmup((w) => !w)}
+          onPress={() => {
+            setWarmupTouched(true);
+            setWarmup((w) => !w);
+          }}
           style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 10 }}
         >
           <View
@@ -615,8 +769,8 @@ function ExerciseLogger({ exercise: ex, onAddSet, onRemoveSet, onRemove }) {
               height: 20,
               borderRadius: 5,
               borderWidth: 1.5,
-              borderColor: warmup ? theme.colors.gold : theme.colors.border,
-              backgroundColor: warmup ? theme.colors.gold : 'transparent',
+              borderColor: warmup ? theme.colors.highlight : theme.colors.border,
+              backgroundColor: warmup ? theme.colors.highlight : 'transparent',
               alignItems: 'center',
               justifyContent: 'center',
             }}
@@ -710,7 +864,7 @@ function ExerciseHistoryModal({ visible, onClose, exercise: ex, loggedWorkouts, 
                 style={{
                   fontFamily: theme.font.display,
                   fontSize: 22,
-                  color: theme.colors.gold,
+                  color: theme.colors.highlight,
                 }}
               >
                 {pr.weight} {pr.unit}

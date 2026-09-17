@@ -66,6 +66,10 @@ export function defaultSettings() {
     accentStrength: null,
     accentCardio: null,
     radius: 14,
+    // Quando ligado (por omissão), a tickbox de "série de aquecimento" no
+    // registo de treino vem já marcada enquanto faltarem aquecimentos por
+    // fazer no exercício (ver ExerciseLogger em LogSessionScreen).
+    autoWarmupDefault: true,
   };
 }
 

@@ -392,9 +392,9 @@ function TimeManagementCard({ exercises }) {
   if (!exercises.length) return null;
 
   return (
-    <Card accent={theme.colors.gold}>
+    <Card accent={theme.colors.highlight}>
       <CardTitle>⏱️ Gestão de Tempo</CardTitle>
-      <Body style={{ fontFamily: theme.font.display, fontSize: 22, color: theme.colors.gold, marginBottom: 8 }}>
+      <Body style={{ fontFamily: theme.font.display, fontSize: 22, color: theme.colors.highlight, marginBottom: 8 }}>
         ≈ {formatDuration(totalSeconds)}
       </Body>
       <Note style={{ marginBottom: 10 }}>

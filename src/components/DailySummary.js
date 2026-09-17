@@ -190,7 +190,7 @@ export default function DailySummary({
             label="Gordura"
             value={macros.fat}
             goal={macroGoals.fat}
-            color={theme.colors.gold}
+            color={theme.colors.highlight}
           />
           {onPressMacros ? (
             <Text

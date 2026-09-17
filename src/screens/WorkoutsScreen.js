@@ -87,7 +87,7 @@ export default function WorkoutsScreen({ navigation }) {
 
       {/* Lembrete do plano semanal */}
       {scheduled ? (
-        <Card accent={alreadyDone ? theme.colors.cardio : theme.colors.gold}>
+        <Card accent={alreadyDone ? theme.colors.accent2 : theme.colors.highlight}>
           <CardTitle>Plano de hoje ({WEEKDAY_LABELS[todayKey]})</CardTitle>
           {alreadyDone ? (
             <Note>✅ Já registaste o "{scheduled.name}" de hoje. Bom trabalho!</Note>

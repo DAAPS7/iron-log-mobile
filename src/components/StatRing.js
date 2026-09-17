@@ -17,7 +17,7 @@ const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
 export default function StatRing({ value, unit, percent, tag, color }) {
   const theme = useTheme();
-  const ringColor = color || theme.colors.strength;
+  const ringColor = color || theme.colors.accent;
   const offset = CIRCUMFERENCE - (Math.max(0, Math.min(100, percent)) / 100) * CIRCUMFERENCE;
 
   // A etiqueta usa um fundo translúcido da própria cor do anel; se a cor vier

@@ -185,7 +185,7 @@ export default function FriendsScreen() {
       ) : null}
 
       {social.sharedWorkoutsInbox.length ? (
-        <Card accent={theme.colors.gold}>
+        <Card accent={theme.colors.highlight}>
           <CardTitle>Treinos partilhados contigo</CardTitle>
           {social.sharedWorkoutsInbox.map((s) => (
             <View key={s.id} style={{ paddingVertical: 9 }}>

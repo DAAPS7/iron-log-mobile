@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Pressable, Text, useWindowDimensions, View } from 'react-native';
 
 import LineChart from '../components/LineChart';
@@ -233,9 +233,9 @@ export default function ProgressScreen() {
       </Card>
 
       {pr ? (
-        <Card accent={theme.colors.gold}>
+        <Card accent={theme.colors.highlight}>
           <CardTitle>PR (Recorde Pessoal)</CardTitle>
-          <Body style={{ fontFamily: theme.font.display, fontSize: 24, color: theme.colors.gold }}>
+          <Body style={{ fontFamily: theme.font.display, fontSize: 24, color: theme.colors.highlight }}>
             {pr.weight} {pr.unit}
             {pr.reps ? ` @ ${pr.reps} reps` : ''}
           </Body>
@@ -433,6 +433,18 @@ function ManualPRCard({ exerciseName, pr, manualPR, onSave }) {
   const [weight, setWeight] = useState(manualPR ? String(manualPR.weight) : '');
   const [reps, setReps] = useState(manualPR ? String(manualPR.reps || '') : '');
   const [unit, setUnit] = useState(manualPR?.unit || 'kg');
+
+  // O formulário só recebia os valores certos na primeira montagem
+  // (useState inicial não reage a props novas). Ao trocar de exercício no
+  // seletor — ou logo depois de gravar — o cartão continuava a mostrar os
+  // valores antigos até o ecrã ser desmontado e montado de novo. Sincroniza
+  // aqui sempre que o exercício ou o PR manual guardado mudam.
+  useEffect(() => {
+    setEditing(false);
+    setWeight(manualPR ? String(manualPR.weight) : '');
+    setReps(manualPR ? String(manualPR.reps || '') : '');
+    setUnit(manualPR?.unit || 'kg');
+  }, [exerciseName, manualPR]);
 
   function submit() {
     const w = parseFloat(String(weight).replace(',', '.'));

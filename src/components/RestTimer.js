@@ -13,6 +13,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Pressable, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as Haptics from 'expo-haptics';
 
 import Icon from './Icon';
 import ProgressRing from './ProgressRing';
@@ -56,7 +57,15 @@ export default function RestTimer({ startedAt, totalSeconds = DEFAULT_REST_SECON
     const id = setInterval(() => {
       const elapsed = Math.floor((Date.now() - startedAt - driftRef.current) / 1000);
       const left = Math.max(0, totalSeconds - elapsed);
-      setRemaining(left);
+      setRemaining((prev) => {
+        // Vibra exatamente no instante em que o descanso termina — sinal
+        // claro mesmo que o utilizador não esteja a olhar para o ecrã, e
+        // que só dispara uma vez (na transição para 0, não a cada tick).
+        if (prev > 0 && left === 0) {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+        }
+        return left;
+      });
       if (left === 0) {
         clearInterval(id);
         // Pequena pausa antes de sair, para dar tempo de ver o "0:00".
@@ -86,7 +95,9 @@ export default function RestTimer({ startedAt, totalSeconds = DEFAULT_REST_SECON
   }
 
   const progress = totalSeconds > 0 ? remaining / totalSeconds : 0;
+  const isDone = remaining === 0;
   const nearlyDone = remaining <= 10 && remaining > 0;
+  const emphasisColor = isDone ? theme.colors.good : theme.colors.accent;
 
   return (
     <Animated.View
@@ -110,7 +121,7 @@ export default function RestTimer({ startedAt, totalSeconds = DEFAULT_REST_SECON
             backgroundColor: theme.colors.surfaceHigh,
             borderRadius: theme.radii.xl,
             borderWidth: 1,
-            borderColor: nearlyDone ? theme.colors.accent : theme.colors.border,
+            borderColor: nearlyDone || isDone ? emphasisColor : theme.colors.border,
             padding: theme.space.lg,
           },
           theme.elevation.high,
@@ -134,10 +145,10 @@ export default function RestTimer({ startedAt, totalSeconds = DEFAULT_REST_SECON
               fontFamily: theme.font.bodyBold,
               ...theme.type.label,
               textTransform: 'uppercase',
-              color: nearlyDone ? theme.colors.accent : theme.colors.textMuted,
+              color: nearlyDone || isDone ? emphasisColor : theme.colors.textMuted,
             }}
           >
-            {paused ? 'Descanso em pausa' : nearlyDone ? 'Quase pronto' : 'Descanso'}
+            {paused ? 'Descanso em pausa' : isDone ? 'Descanso terminado!' : nearlyDone ? 'Quase pronto' : 'Descanso'}
           </Text>
           <Text
             style={{
@@ -147,7 +158,7 @@ export default function RestTimer({ startedAt, totalSeconds = DEFAULT_REST_SECON
               marginTop: 2,
             }}
           >
-            Prepara a próxima série.
+            {isDone ? 'Já podes começar a próxima série.' : 'Prepara a próxima série.'}
           </Text>
 
           <View style={{ flexDirection: 'row', gap: 8, marginTop: theme.space.md }}>

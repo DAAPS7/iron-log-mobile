@@ -514,7 +514,7 @@ function WaterCard({ totalMl, goalMl, hasWeight, onAdd, onReset }) {
   const pct = goalMl ? Math.round((totalMl / goalMl) * 100) : 0;
 
   return (
-    <Card accent={theme.colors.cardio}>
+    <Card accent={theme.colors.water}>
       <View
         style={{
           flexDirection: 'row',
@@ -528,7 +528,7 @@ function WaterCard({ totalMl, goalMl, hasWeight, onAdd, onReset }) {
           style={{
             fontFamily: theme.font.display,
             ...theme.type.numericSm,
-            color: pct >= 100 ? theme.colors.good : theme.colors.cardio,
+            color: pct >= 100 ? theme.colors.good : theme.colors.water,
           }}
         >
           {pct}%
@@ -538,7 +538,7 @@ function WaterCard({ totalMl, goalMl, hasWeight, onAdd, onReset }) {
         label="Hoje"
         value={totalMl}
         goal={goalMl}
-        color={theme.colors.cardio}
+        color={theme.colors.water}
         unit="ml"
       />
       <Note style={{ marginBottom: 10 }}>

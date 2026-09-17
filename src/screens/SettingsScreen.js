@@ -6,6 +6,7 @@ import {
   Button,
   Card,
   CardTitle,
+  Checkbox,
   Field,
   Note,
   Screen,
@@ -83,7 +84,7 @@ export default function SettingsScreen() {
                   }}
                 >
                   <View style={{ flexDirection: 'row', gap: 4, marginBottom: 8 }}>
-                    {[swatch.strength, swatch.cardio, swatch.gold, swatch.info].map(
+                    {[swatch.strength, swatch.cardio, swatch.highlight, swatch.info].map(
                       (c) => (
                         <View
                           key={c}
@@ -105,6 +106,16 @@ export default function SettingsScreen() {
         </Field>
 
         <Note>A preferência é guardada na conta e acompanha-te no site.</Note>
+      </Card>
+
+      <Card>
+        <CardTitle>Registo de treino</CardTitle>
+        <Checkbox
+          label="Marcar aquecimento automaticamente"
+          description="A tickbox de 'série de aquecimento' vem já ligada enquanto o exercício tiver aquecimentos por fazer."
+          value={settings.autoWarmupDefault !== false}
+          onChange={(v) => updateSettings((prev) => ({ ...prev, autoWarmupDefault: v }))}
+        />
       </Card>
 
       <Card>

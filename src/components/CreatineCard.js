@@ -18,7 +18,7 @@ export default function CreatineCard({ takenToday, streak, onToggle }) {
   const theme = useTheme();
 
   return (
-    <Card accent={theme.colors.gold}>
+    <Card accent={theme.colors.highlight}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.space.lg }}>
         <ToggleCircle onPress={onToggle} taken={takenToday} theme={theme} />
 
@@ -37,12 +37,12 @@ export default function CreatineCard({ takenToday, streak, onToggle }) {
 
         <View style={{ alignItems: 'center' }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-            <Icon name="flame" size={16} color={streak > 0 ? theme.colors.gold : theme.colors.textMuted} />
+            <Icon name="flame" size={16} color={streak > 0 ? theme.colors.highlight : theme.colors.textMuted} />
             <Text
               style={{
                 fontFamily: theme.font.display,
                 ...theme.type.numericSm,
-                color: streak > 0 ? theme.colors.gold : theme.colors.textMuted,
+                color: streak > 0 ? theme.colors.highlight : theme.colors.textMuted,
               }}
             >
               {streak}
@@ -68,7 +68,7 @@ function ToggleCircle({ onPress, taken, theme }) {
         borderRadius: theme.radii.pill,
         borderWidth: 1.5,
         borderColor: taken ? 'transparent' : theme.colors.borderStrong,
-        backgroundColor: taken ? theme.colors.gold : 'transparent',
+        backgroundColor: taken ? theme.colors.highlight : 'transparent',
         alignItems: 'center',
         justifyContent: 'center',
         opacity: pressed ? 0.7 : 1,

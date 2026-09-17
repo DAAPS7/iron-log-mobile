@@ -114,8 +114,8 @@ export default function WeightChart({ points, width }) {
       <Svg width={width} height={HEIGHT}>
         <Defs>
           <LinearGradient id="weightFill" x1="0" y1="0" x2="0" y2="1">
-            <Stop offset="0" stopColor={theme.colors.cardio} stopOpacity="0.22" />
-            <Stop offset="1" stopColor={theme.colors.cardio} stopOpacity="0" />
+            <Stop offset="0" stopColor={theme.colors.accent2} stopOpacity="0.22" />
+            <Stop offset="1" stopColor={theme.colors.accent2} stopOpacity="0" />
           </LinearGradient>
         </Defs>
 
@@ -132,14 +132,14 @@ export default function WeightChart({ points, width }) {
         {/* Linha diária, fina e semi-transparente */}
         <Path
           d={dailyPath}
-          stroke={theme.colors.strength}
+          stroke={theme.colors.accent}
           strokeOpacity={0.4}
           strokeWidth={1.5}
           fill="none"
           strokeLinecap="round"
         />
         {points.map((p, i) => (
-          <Circle key={i} cx={dailyXFor(i)} cy={yFor(p.value)} r={2} fill={theme.colors.strength} opacity={0.5} />
+          <Circle key={i} cx={dailyXFor(i)} cy={yFor(p.value)} r={2} fill={theme.colors.accent} opacity={0.5} />
         ))}
 
         {/* Média semanal, grossa e em destaque, com preenchimento */}
@@ -147,14 +147,14 @@ export default function WeightChart({ points, width }) {
         {weeklyPath ? (
           <Path
             d={weeklyPath}
-            stroke={theme.colors.cardio}
+            stroke={theme.colors.accent2}
             strokeWidth={3}
             fill="none"
             strokeLinecap="round"
           />
         ) : null}
         {weekly.map((p, i) => (
-          <Circle key={i} cx={weeklyXFor(i)} cy={yFor(p.value)} r={4} fill={theme.colors.cardio} />
+          <Circle key={i} cx={weeklyXFor(i)} cy={yFor(p.value)} r={4} fill={theme.colors.accent2} />
         ))}
 
         <SvgText x={PAD.left - 6} y={PAD.top + 8} fill={theme.colors.muted}
@@ -182,8 +182,8 @@ export default function WeightChart({ points, width }) {
       </Svg>
 
       <View style={{ flexDirection: 'row', gap: 16, marginTop: 4 }}>
-        <Legend color={theme.colors.strength} label="Diário" opacity={0.6} />
-        <Legend color={theme.colors.cardio} label="Média semanal" />
+        <Legend color={theme.colors.accent} label="Diário" opacity={0.6} />
+        <Legend color={theme.colors.accent2} label="Média semanal" />
       </View>
     </View>
   );

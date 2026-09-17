@@ -64,7 +64,7 @@ export default function RootNavigator() {
       card: theme.colors.surface,
       text: theme.colors.ink,
       border: theme.colors.border,
-      primary: theme.colors.strength,
+      primary: theme.colors.accent,
     },
   };
 

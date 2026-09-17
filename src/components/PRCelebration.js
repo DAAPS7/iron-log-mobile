@@ -26,10 +26,18 @@ export default function PRCelebration({ pr, onDismiss }) {
   useEffect(() => {
     if (!pr) return undefined;
 
+    // Se já havia uma celebração anterior a decorrer (ex: dois PRs seguidos
+    // no mesmo treino), tem de se parar a animação antiga antes de começar
+    // esta. Sem isto, as duas animações competiam pelo mesmo valor
+    // (`anim`), e o callback de conclusão da mais antiga chamava
+    // `onDismiss()` por cima do banner novo — fazendo-o desaparecer ou nem
+    // chegar a mostrar-se.
+    anim.stopAnimation();
+    shine.stopAnimation();
     anim.setValue(0);
     shine.setValue(0);
 
-    Animated.sequence([
+    const sequence = Animated.sequence([
       Animated.timing(anim, {
         toValue: 1,
         duration: theme.motion.duration.slow,
@@ -43,20 +51,25 @@ export default function PRCelebration({ pr, onDismiss }) {
         easing: Easing.bezier(...theme.motion.easing.accelerate),
         useNativeDriver: true,
       }),
-    ]).start(({ finished }) => {
+    ]);
+    sequence.start(({ finished }) => {
       if (finished) onDismiss?.();
     });
 
     // Brilho que atravessa o cartão uma vez, para dar o toque de "conquista".
-    Animated.timing(shine, {
+    const shineAnim = Animated.timing(shine, {
       toValue: 1,
       duration: 900,
       delay: 180,
       easing: Easing.bezier(...theme.motion.easing.standard),
       useNativeDriver: true,
-    }).start();
+    });
+    shineAnim.start();
 
-    return undefined;
+    return () => {
+      sequence.stop();
+      shineAnim.stop();
+    };
   }, [pr]);
 
   if (!pr) return null;
@@ -83,14 +96,14 @@ export default function PRCelebration({ pr, onDismiss }) {
               borderRadius: theme.radii.lg,
               overflow: 'hidden',
               borderWidth: 1,
-              borderColor: theme.colors.gold,
+              borderColor: theme.colors.highlight,
               backgroundColor: theme.colors.surfaceHigh,
             },
             theme.elevation.high,
           ]}
         >
           <LinearGradient
-            colors={[rgba(theme.colors.gold, 0.22), rgba(theme.colors.gold, 0.04)]}
+            colors={[rgba(theme.colors.highlight, 0.22), rgba(theme.colors.highlight, 0.04)]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 }}
@@ -143,10 +156,10 @@ export default function PRCelebration({ pr, onDismiss }) {
                 borderRadius: theme.radii.pill,
                 alignItems: 'center',
                 justifyContent: 'center',
-                backgroundColor: rgba(theme.colors.gold, 0.18),
+                backgroundColor: rgba(theme.colors.highlight, 0.18),
               }}
             >
-              <Icon name="trophy" size={24} color={theme.colors.gold} strokeWidth={2} />
+              <Icon name="trophy" size={24} color={theme.colors.highlight} strokeWidth={2} />
             </View>
 
             <View style={{ flex: 1 }}>
@@ -155,7 +168,7 @@ export default function PRCelebration({ pr, onDismiss }) {
                   fontFamily: theme.font.bodyBold,
                   ...theme.type.label,
                   textTransform: 'uppercase',
-                  color: theme.colors.gold,
+                  color: theme.colors.highlight,
                 }}
               >
                 Novo recorde pessoal

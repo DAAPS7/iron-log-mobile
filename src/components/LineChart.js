@@ -33,7 +33,7 @@ function formatNumber(n) {
 
 export default function LineChart({ points, width, color, fill = true }) {
   const theme = useTheme();
-  const lineColor = color || theme.colors.strength;
+  const lineColor = color || theme.colors.accent;
 
   if (!points || points.length < 2) {
     return (
