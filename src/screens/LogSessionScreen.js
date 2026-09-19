@@ -210,16 +210,23 @@ export default function LogSessionScreen({ route, navigation }) {
   function persistSetsNow(prevSession, exercises, prUpdate) {
     const withSets = exercises.filter((ex) => ex.sets.length);
     const existingId = prevSession.loggedEntryId;
+    const isEditing = !!prevSession.editingLogId;
 
     if (!withSets.length) {
-      if (existingId) {
+      // A editar um registo já existente, nunca se apaga a entrada só por
+      // ficar temporariamente sem séries (ex: o utilizador está a
+      // reorganizar) — fica como estava até haver algo novo para gravar.
+      // Numa sessão nova, sem sets nunca chegou a haver nada digno de
+      // guardar, por isso a entrada (se existir) é removida.
+      if (existingId && !isEditing) {
         updateData((prevData) => ({
           ...prevData,
           loggedWorkouts: prevData.loggedWorkouts.filter((lw) => lw.id !== existingId),
           deletedIds: markDeleted(prevData, 'loggedWorkouts', existingId),
         }));
+        return null;
       }
-      return null;
+      return existingId;
     }
 
     const exercisesOut = withSets.map((ex) => ({
@@ -297,12 +304,9 @@ export default function LogSessionScreen({ route, navigation }) {
       const nextExercises = prev.exercises.map((ex, i) =>
         i === exIndex ? { ...ex, sets: [...ex.sets, setStr] } : ex,
       );
-      // A gravação imediata só se aplica a sessões novas. A editar um
-      // registo já existente, a app volta ao comportamento de sempre:
-      // as alterações só ficam guardadas a sério ao premir "Guardar
-      // alterações" — remover séries a meio de uma edição não pode apagar
-      // o treino inteiro antes de o utilizador decidir salvar.
-      if (prev.editingLogId) return { ...prev, exercises: nextExercises };
+      // Grava-se de imediato também a editar um registo já existente —
+      // sem isto, uma série acrescentada a meio de uma edição perdia-se se
+      // saísses do ecrã sem premir "Guardar alterações".
       const nextEntryId = persistSetsNow(prev, nextExercises, prUpdate);
       return { ...prev, exercises: nextExercises, loggedEntryId: nextEntryId };
     });
@@ -320,7 +324,6 @@ export default function LogSessionScreen({ route, navigation }) {
           ? { ...ex, sets: ex.sets.filter((_, s) => s !== setIndex) }
           : ex,
       );
-      if (prev.editingLogId) return { ...prev, exercises: nextExercises };
       const nextEntryId = persistSetsNow(prev, nextExercises, null);
       return { ...prev, exercises: nextExercises, loggedEntryId: nextEntryId };
     });
