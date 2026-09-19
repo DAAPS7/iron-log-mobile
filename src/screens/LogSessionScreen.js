@@ -497,7 +497,9 @@ export default function LogSessionScreen({ route, navigation }) {
         <Button
           title={session.editingLogId ? 'Guardar alterações' : 'Concluir treino'}
           variant="invert"
+          icon={session.editingLogId ? undefined : '✅'}
           onPress={finish}
+          style={{ minHeight: 58, paddingVertical: 16 }}
         />
       </View>
 
