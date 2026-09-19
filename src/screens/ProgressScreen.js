@@ -449,7 +449,11 @@ function ManualPRCard({ exerciseName, pr, manualPR, onSave }) {
   function submit() {
     const w = parseFloat(String(weight).replace(',', '.'));
     if (isNaN(w) || w <= 0) return;
-    onSave({ weight: w, reps: parseInt(reps, 10) || null, unit });
+    // O timestamp é o que permite à fusão (local e no servidor) perceber
+    // que esta é a versão mais recente — sem ele, uma correção para um
+    // valor mais baixo era sempre desfeita pela fusão "o maior valor
+    // ganha" assim que a próxima resposta do servidor chegasse.
+    onSave({ weight: w, reps: parseInt(reps, 10) || null, unit, updatedAt: Date.now() });
     setEditing(false);
   }
 

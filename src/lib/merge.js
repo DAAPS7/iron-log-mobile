@@ -16,7 +16,7 @@ const MERGE_ARRAYS_BY_ID = [
   'exerciseGoals',
 ];
 const MERGE_ARRAYS_BY_DATE = ['weightHistory', 'creatineLog'];
-const MERGE_BEST_WEIGHT_OBJECTS = ['exercisePRs', 'prNotifyCache'];
+const MERGE_BEST_WEIGHT_OBJECTS = ['prNotifyCache'];
 const MERGE_SHALLOW_OBJECTS = ['metricGoals', 'macroGoals', 'weeklySchedule'];
 const DELETABLE_FIELDS = [...MERGE_ARRAYS_BY_ID, ...MERGE_ARRAYS_BY_DATE];
 
@@ -79,6 +79,29 @@ function mergeBestWeightObject(oldObj, newObj) {
   return merged;
 }
 
+// `exercisePRs` é o único destes campos editável manualmente (para corrigir
+// um valor errado, inclusive para um valor MAIS BAIXO). Fundir sempre "o
+// maior valor ganha" desfazia essa correção poucos segundos depois, assim
+// que a resposta da gravação trazia de volta o valor antigo mais alto —
+// espelha exatamente a mesma correção feita no Worker (src/utils.js).
+// Quando os dois lados têm `updatedAt`, ganha sempre o mais recente,
+// respeitando a intenção explícita do utilizador.
+function isNewerOrBetterPR(a, b) {
+  if (!a) return false;
+  if (!b) return true;
+  if (a.updatedAt != null && b.updatedAt != null) return a.updatedAt > b.updatedAt;
+  if (a.updatedAt != null && b.updatedAt == null) return true;
+  if (a.updatedAt == null && b.updatedAt != null) return false;
+  return isBetterPR(a, b);
+}
+function mergeExercisePRs(oldObj, newObj) {
+  const merged = { ...(oldObj || {}) };
+  for (const [key, val] of Object.entries(newObj || {})) {
+    merged[key] = isNewerOrBetterPR(val, merged[key]) ? val : merged[key];
+  }
+  return merged;
+}
+
 /**
  * Funde `oldData` (ex: a resposta do servidor) com `newData` (ex: o estado
  * local mais recente, que pode já ter avançado). Os campos escalares vêm
@@ -102,6 +125,7 @@ export function mergeUserData(oldData, newData) {
   MERGE_BEST_WEIGHT_OBJECTS.forEach((key) => {
     merged[key] = mergeBestWeightObject(oldData[key], newData[key]);
   });
+  merged.exercisePRs = mergeExercisePRs(oldData.exercisePRs, newData.exercisePRs);
   MERGE_SHALLOW_OBJECTS.forEach((key) => {
     merged[key] = mergeShallowObject(oldData[key], newData[key]);
   });

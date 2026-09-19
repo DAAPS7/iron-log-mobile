@@ -470,6 +470,14 @@ export function Button({ title, onPress, variant = 'primary', disabled, loading,
     primary: { bg: theme.colors.accent, fg: theme.isDark ? '#0B0F0C' : '#FFFFFF', border: 'transparent' },
     strength: { bg: theme.colors.accent, fg: theme.isDark ? '#0B0F0C' : '#FFFFFF', border: 'transparent' },
     cardio: { bg: theme.colors.cardio, fg: theme.isDark ? '#08120F' : '#FFFFFF', border: 'transparent' },
+    // Mono, sem gradiente: sempre o oposto do fundo do ecrã, para se
+    // destacar de forma consistente em qualquer paleta de cor — usado na
+    // ação principal do registo de treino.
+    invert: {
+      bg: theme.isDark ? '#FFFFFF' : '#000000',
+      fg: theme.isDark ? '#000000' : '#FFFFFF',
+      border: 'transparent',
+    },
     ghost: { bg: 'transparent', fg: theme.colors.textPrimary, border: theme.colors.borderStrong },
     danger: {
       bg: withAlphaSafe(theme.colors.danger, 0.12),

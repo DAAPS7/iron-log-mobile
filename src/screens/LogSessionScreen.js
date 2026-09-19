@@ -307,9 +307,8 @@ export default function LogSessionScreen({ route, navigation }) {
       return { ...prev, exercises: nextExercises, loggedEntryId: nextEntryId };
     });
     // O descanso só faz sentido depois de uma série de trabalho — depois de
-    // um aquecimento passa-se logo à seguinte. Em modo de edição também
-    // não, porque aí não se está a treinar.
-    if (!isWarmupSet(setStr) && !editingLogId) {
+    // um aquecimento passa-se logo à seguinte.
+    if (!isWarmupSet(setStr)) {
       setRestStartedAt(Date.now());
     }
   }
@@ -497,7 +496,7 @@ export default function LogSessionScreen({ route, navigation }) {
       <View style={{ marginTop: theme.space.xl }}>
         <Button
           title={session.editingLogId ? 'Guardar alterações' : 'Concluir treino'}
-          variant="primary"
+          variant="invert"
           icon={session.editingLogId ? undefined : '✅'}
           onPress={finish}
           style={{ minHeight: 58, paddingVertical: 16 }}

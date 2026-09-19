@@ -14,10 +14,14 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Pressable, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
+import { useAudioPlayer } from 'expo-audio';
 
 import Icon from './Icon';
 import ProgressRing from './ProgressRing';
 import { useTheme } from '../context/ThemeContext';
+
+// Som curto (dois "bips") tocado no instante em que o descanso termina.
+const REST_END_SOUND = require('../../assets/sounds/rest-end.wav');
 
 export const DEFAULT_REST_SECONDS = 150; // 2:30
 
@@ -33,6 +37,7 @@ export default function RestTimer({ startedAt, totalSeconds = DEFAULT_REST_SECON
   const [remaining, setRemaining] = useState(totalSeconds);
   const [paused, setPaused] = useState(false);
   const enter = useRef(new Animated.Value(0)).current;
+  const endSound = useAudioPlayer(REST_END_SOUND);
 
   // A contagem é derivada do relógio (não de um contador incrementado), para
   // continuar correta mesmo que a app fique suspensa uns segundos.
@@ -63,6 +68,13 @@ export default function RestTimer({ startedAt, totalSeconds = DEFAULT_REST_SECON
         // que só dispara uma vez (na transição para 0, não a cada tick).
         if (prev > 0 && left === 0) {
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+          try {
+            endSound.seekTo(0);
+            endSound.play();
+          } catch (e) {
+            // O som é só um extra — nunca deve impedir o resto do
+            // temporizador de continuar a funcionar.
+          }
         }
         return left;
       });
