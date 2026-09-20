@@ -13,7 +13,7 @@
  *  - nenhum valor solto: espaçamento, raio, tipo e movimento vêm do tema.
  */
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef } from "react";
 import {
   ActivityIndicator,
   Animated,
@@ -25,12 +25,12 @@ import {
   Text,
   TextInput,
   View,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { LinearGradient } from "expo-linear-gradient";
 
-import Icon from './Icon';
-import { useTheme } from '../context/ThemeContext';
+import Icon from "./Icon";
+import { useTheme } from "../context/ThemeContext";
 
 /* ---------- Ajudas de animação ----------
  * Usamos a Animated API do React Native (não reanimated) nestes primitivos
@@ -58,7 +58,9 @@ function usePressScale(enabled, targetScale) {
 
   return {
     scale,
-    onPressIn: enabled ? () => to(targetScale ?? theme.motion.pressScale) : undefined,
+    onPressIn: enabled
+      ? () => to(targetScale ?? theme.motion.pressScale)
+      : undefined,
     onPressOut: enabled ? () => to(1) : undefined,
   };
 }
@@ -85,7 +87,12 @@ export function FadeInView({ children, delay = 0, style }) {
         {
           opacity: progress,
           transform: [
-            { translateY: progress.interpolate({ inputRange: [0, 1], outputRange: [10, 0] }) },
+            {
+              translateY: progress.interpolate({
+                inputRange: [0, 1],
+                outputRange: [10, 0],
+              }),
+            },
           ],
         },
         style,
@@ -104,7 +111,10 @@ export function Screen({ children, scroll = true, contentStyle }) {
   const theme = useTheme();
   const Container = scroll ? ScrollView : View;
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.bg }} edges={['top']}>
+    <SafeAreaView
+      style={{ flex: 1, backgroundColor: theme.colors.bg }}
+      edges={["top"]}
+    >
       <Container
         style={{ flex: 1 }}
         contentContainerStyle={
@@ -115,13 +125,17 @@ export function Screen({ children, scroll = true, contentStyle }) {
                   // Espaço extra em baixo para o conteúdo nunca ficar
                   // escondido atrás da barra de navegação flutuante.
                   paddingBottom: theme.space.xxxl * 2.5,
-                  width: '100%',
+                  width: "100%",
                   maxWidth: MAX_CONTENT_WIDTH,
-                  alignSelf: 'center',
+                  alignSelf: "center",
                 },
                 contentStyle,
               ]
-            : { width: '100%', maxWidth: MAX_CONTENT_WIDTH, alignSelf: 'center' }
+            : {
+                width: "100%",
+                maxWidth: MAX_CONTENT_WIDTH,
+                alignSelf: "center",
+              }
         }
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
@@ -138,8 +152,8 @@ export function ScreenTitle({ children, subtitle, right }) {
   return (
     <View
       style={{
-        flexDirection: 'row',
-        alignItems: 'flex-start',
+        flexDirection: "row",
+        alignItems: "flex-start",
         marginBottom: theme.space.xl,
       }}
     >
@@ -178,9 +192,9 @@ export function SectionHeader({ children, right, style }) {
     <View
       style={[
         {
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-between",
           marginBottom: theme.space.md,
           marginTop: theme.space.xs,
         },
@@ -191,7 +205,7 @@ export function SectionHeader({ children, right, style }) {
         style={{
           fontFamily: theme.font.bodyBold,
           ...theme.type.label,
-          textTransform: 'uppercase',
+          textTransform: "uppercase",
           color: theme.colors.textMuted,
         }}
       >
@@ -213,7 +227,14 @@ export function SectionHeader({ children, right, style }) {
  * `accent` pinta uma faixa fina no topo (identidade da secção) e `onPress`
  * ativa a resposta de toque.
  */
-export function Card({ children, accent, onPress, style, level = 'surface', padded = true }) {
+export function Card({
+  children,
+  accent,
+  onPress,
+  style,
+  level = "surface",
+  padded = true,
+}) {
   const theme = useTheme();
   const { scale, onPressIn, onPressOut } = usePressScale(!!onPress);
 
@@ -223,14 +244,18 @@ export function Card({ children, accent, onPress, style, level = 'surface', padd
     high: theme.colors.surfaceHigh,
   }[level];
 
-  const shadow = { surface: theme.elevation.low, elevated: theme.elevation.medium, high: theme.elevation.high }[
-    level
-  ];
+  const shadow = {
+    surface: theme.elevation.low,
+    elevated: theme.elevation.medium,
+    high: theme.elevation.high,
+  }[level];
 
   const Wrapper = onPress ? Pressable : View;
 
   return (
-    <Animated.View style={{ transform: [{ scale }], marginBottom: theme.space.lg }}>
+    <Animated.View
+      style={{ transform: [{ scale }], marginBottom: theme.space.lg }}
+    >
       {accent ? (
         // Brilho por trás do cartão: uma forma da cor do cartão (accent),
         // do mesmo tamanho/posição, mas ligeiramente para dentro — fica
@@ -242,7 +267,7 @@ export function Card({ children, accent, onPress, style, level = 'surface', padd
         <View
           pointerEvents="none"
           style={{
-            position: 'absolute',
+            position: "absolute",
             top: 6,
             left: 6,
             right: 6,
@@ -250,8 +275,8 @@ export function Card({ children, accent, onPress, style, level = 'surface', padd
             borderRadius: theme.radii.lg,
             backgroundColor: accent,
             shadowColor: accent,
-            shadowOpacity: 0.65,
-            shadowRadius: 36,
+            shadowOpacity: 0.75,
+            shadowRadius: 60,
             shadowOffset: { width: 0, height: 0 },
             elevation: 14,
           }}
@@ -267,7 +292,7 @@ export function Card({ children, accent, onPress, style, level = 'surface', padd
             borderRadius: theme.radii.lg,
             borderWidth: 1,
             borderColor: theme.colors.border,
-            overflow: 'hidden',
+            overflow: "hidden",
           },
           shadow,
           style,
@@ -279,13 +304,19 @@ export function Card({ children, accent, onPress, style, level = 'surface', padd
           colors={theme.gradients.surfaceSheen}
           start={{ x: 0, y: 0 }}
           end={{ x: 0, y: 1 }}
-          style={{ position: 'absolute', left: 0, right: 0, top: 0, height: 130 }}
+          style={{
+            position: "absolute",
+            left: 0,
+            right: 0,
+            top: 0,
+            height: 130,
+          }}
           pointerEvents="none"
         />
         {accent ? (
           <View
             style={{
-              position: 'absolute',
+              position: "absolute",
               top: 0,
               left: 0,
               right: 0,
@@ -295,7 +326,9 @@ export function Card({ children, accent, onPress, style, level = 'surface', padd
             pointerEvents="none"
           />
         ) : null}
-        <View style={padded ? { padding: theme.space.lg } : null}>{children}</View>
+        <View style={padded ? { padding: theme.space.lg } : null}>
+          {children}
+        </View>
       </Wrapper>
     </Animated.View>
   );
@@ -307,9 +340,9 @@ export function CardTitle({ children, right, style }) {
     <View
       style={[
         {
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-between",
           marginBottom: theme.space.md,
         },
         style,
@@ -319,7 +352,7 @@ export function CardTitle({ children, right, style }) {
         style={{
           fontFamily: theme.font.bodyBold,
           ...theme.type.label,
-          textTransform: 'uppercase',
+          textTransform: "uppercase",
           color: theme.colors.textMuted,
           flex: 1,
         }}
@@ -338,7 +371,11 @@ export function Body({ children, color, style }) {
   return (
     <Text
       style={[
-        { fontFamily: theme.font.body, ...theme.type.body, color: color || theme.colors.textPrimary },
+        {
+          fontFamily: theme.font.body,
+          ...theme.type.body,
+          color: color || theme.colors.textPrimary,
+        },
         style,
       ]}
     >
@@ -390,7 +427,15 @@ export function AnimatedNumber({ value, decimals = 0, style, color }) {
   }, [target]);
 
   return (
-    <Text style={[{ fontFamily: theme.font.display, color: color || theme.colors.textPrimary }, style]}>
+    <Text
+      style={[
+        {
+          fontFamily: theme.font.display,
+          color: color || theme.colors.textPrimary,
+        },
+        style,
+      ]}
+    >
       {display.toFixed(decimals)}
     </Text>
   );
@@ -399,9 +444,10 @@ export function AnimatedNumber({ value, decimals = 0, style, color }) {
 /** Estatística grande, com o número em destaque e a unidade discreta. */
 export function BigStat({ value, unit, color, animated = false }) {
   const theme = useTheme();
-  const numeric = typeof value === 'number' || (!isNaN(parseFloat(value)) && isFinite(value));
+  const numeric =
+    typeof value === "number" || (!isNaN(parseFloat(value)) && isFinite(value));
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
+    <View style={{ flexDirection: "row", alignItems: "baseline" }}>
       {animated && numeric ? (
         <AnimatedNumber
           value={value}
@@ -458,7 +504,7 @@ export function Badge({ children, color, style }) {
         style={{
           fontFamily: theme.font.bodyBold,
           ...theme.type.caption,
-          textTransform: 'uppercase',
+          textTransform: "uppercase",
           color: c,
         }}
       >
@@ -470,11 +516,18 @@ export function Badge({ children, color, style }) {
 
 // Aceita hex ou rgb() — as cores de acento podem vir das duas formas.
 function withAlphaSafe(color, alpha) {
-  if (!color) return 'transparent';
-  if (color.startsWith('rgb(')) return color.replace('rgb(', 'rgba(').replace(')', `, ${alpha})`);
-  if (color.startsWith('rgba')) return color;
-  const h = color.replace('#', '');
-  const full = h.length === 3 ? h.split('').map((c) => c + c).join('') : h;
+  if (!color) return "transparent";
+  if (color.startsWith("rgb("))
+    return color.replace("rgb(", "rgba(").replace(")", `, ${alpha})`);
+  if (color.startsWith("rgba")) return color;
+  const h = color.replace("#", "");
+  const full =
+    h.length === 3
+      ? h
+          .split("")
+          .map((c) => c + c)
+          .join("")
+      : h;
   const r = parseInt(full.slice(0, 2), 16);
   const g = parseInt(full.slice(2, 4), 16);
   const b = parseInt(full.slice(4, 6), 16);
@@ -483,46 +536,84 @@ function withAlphaSafe(color, alpha) {
 
 /* ---------- Botões ---------- */
 
-export function Button({ title, onPress, variant = 'primary', disabled, loading, style, icon }) {
+export function Button({
+  title,
+  onPress,
+  variant = "primary",
+  disabled,
+  loading,
+  style,
+  icon,
+}) {
   const theme = useTheme();
-  const { scale, onPressIn, onPressOut } = usePressScale(!disabled && !loading, 0.955);
+  const { scale, onPressIn, onPressOut } = usePressScale(
+    !disabled && !loading,
+    0.955,
+  );
 
   // O gradiente é usado apenas como contorno, nunca como preenchimento —
   // botões inteiramente pintados a gradiente tornavam-se ruidosos quando
   // apareciam vários no mesmo ecrã.
-  const gradientBorder = variant === 'primary' || variant === 'strength';
+  const gradientBorder = variant === "primary" || variant === "strength";
 
   const palette = {
-    primary: { bg: theme.colors.accent, fg: theme.isDark ? '#0B0F0C' : '#FFFFFF', border: 'transparent' },
-    strength: { bg: theme.colors.accent, fg: theme.isDark ? '#0B0F0C' : '#FFFFFF', border: 'transparent' },
-    cardio: { bg: theme.colors.cardio, fg: theme.isDark ? '#08120F' : '#FFFFFF', border: 'transparent' },
+    primary: {
+      bg: theme.colors.accent,
+      fg: theme.isDark ? "#0B0F0C" : "#FFFFFF",
+      border: "transparent",
+    },
+    strength: {
+      bg: theme.colors.accent,
+      fg: theme.isDark ? "#0B0F0C" : "#FFFFFF",
+      border: "transparent",
+    },
+    cardio: {
+      bg: theme.colors.cardio,
+      fg: theme.isDark ? "#08120F" : "#FFFFFF",
+      border: "transparent",
+    },
     // Mono, sem gradiente: sempre o oposto do fundo do ecrã, para se
     // destacar de forma consistente em qualquer paleta de cor — usado na
     // ação principal do registo de treino.
     invert: {
-      bg: theme.isDark ? '#FFFFFF' : '#000000',
-      fg: theme.isDark ? '#000000' : '#FFFFFF',
-      border: 'transparent',
+      bg: theme.isDark ? "#FFFFFF" : "#000000",
+      fg: theme.isDark ? "#000000" : "#FFFFFF",
+      border: "transparent",
     },
-    ghost: { bg: 'transparent', fg: theme.colors.textPrimary, border: theme.colors.borderStrong },
+    ghost: {
+      bg: "transparent",
+      fg: theme.colors.textPrimary,
+      border: theme.colors.borderStrong,
+    },
     danger: {
       bg: withAlphaSafe(theme.colors.danger, 0.12),
       fg: theme.colors.danger,
       border: withAlphaSafe(theme.colors.danger, 0.3),
     },
-  }[variant] || { bg: 'transparent', fg: theme.colors.textPrimary, border: theme.colors.borderStrong };
+  }[variant] || {
+    bg: "transparent",
+    fg: theme.colors.textPrimary,
+    border: theme.colors.borderStrong,
+  };
 
   const content = loading ? (
     <ActivityIndicator color={palette.fg} size="small" />
   ) : (
-    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7 }}>
+    <View
+      style={{
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 7,
+      }}
+    >
       {icon ? <Text style={{ fontSize: 13 }}>{icon}</Text> : null}
       <Text
         numberOfLines={1}
         style={{
           fontFamily: theme.font.bodyBold,
           ...theme.type.button,
-          textTransform: 'uppercase',
+          textTransform: "uppercase",
           color: palette.fg,
         }}
       >
@@ -544,15 +635,15 @@ export function Button({ title, onPress, variant = 'primary', disabled, loading,
    */
   const flat = StyleSheet.flatten(style) || {};
   const INNER_KEYS = [
-    'padding',
-    'paddingVertical',
-    'paddingHorizontal',
-    'paddingTop',
-    'paddingBottom',
-    'paddingLeft',
-    'paddingRight',
-    'minHeight',
-    'height',
+    "padding",
+    "paddingVertical",
+    "paddingHorizontal",
+    "paddingTop",
+    "paddingBottom",
+    "paddingLeft",
+    "paddingRight",
+    "minHeight",
+    "height",
   ];
   const innerOverrides = {};
   const wrapperStyle = {};
@@ -565,28 +656,37 @@ export function Button({ title, onPress, variant = 'primary', disabled, loading,
     minHeight: 38,
     paddingVertical: 9,
     paddingHorizontal: theme.space.lg,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     borderRadius: theme.radii.pill,
     ...innerOverrides,
   };
   // Se o ecrã pediu um botão compacto (padding menor) e não impôs altura,
   // a altura mínima tem de descer também — senão o botão continuava alto e
   // o padding pedido não tinha efeito visível.
-  if (innerOverrides.paddingVertical != null && innerOverrides.minHeight == null) {
+  if (
+    innerOverrides.paddingVertical != null &&
+    innerOverrides.minHeight == null
+  ) {
     inner.minHeight = Math.max(30, innerOverrides.paddingVertical * 2 + 18);
   }
 
   const BORDER = 1.5;
 
   return (
-    <Animated.View style={[{ transform: [{ scale }], flexShrink: 0 }, wrapperStyle]}>
+    <Animated.View
+      style={[{ transform: [{ scale }], flexShrink: 0 }, wrapperStyle]}
+    >
       <Pressable
         onPress={onPress}
         disabled={disabled || loading}
         onPressIn={onPressIn}
         onPressOut={onPressOut}
-        style={{ opacity: disabled ? 0.4 : 1, borderRadius: theme.radii.pill, overflow: 'hidden' }}
+        style={{
+          opacity: disabled ? 0.4 : 1,
+          borderRadius: theme.radii.pill,
+          overflow: "hidden",
+        }}
       >
         {gradientBorder ? (
           // O contorno em gradiente é o próprio LinearGradient a servir de
@@ -610,7 +710,11 @@ export function Button({ title, onPress, variant = 'primary', disabled, loading,
           <View
             style={[
               inner,
-              { backgroundColor: palette.bg, borderWidth: BORDER, borderColor: palette.border },
+              {
+                backgroundColor: palette.bg,
+                borderWidth: BORDER,
+                borderColor: palette.border,
+              },
             ]}
           >
             {content}
@@ -632,7 +736,7 @@ export function Field({ label, hint, children, flex }) {
           style={{
             fontFamily: theme.font.bodyBold,
             ...theme.type.label,
-            textTransform: 'uppercase',
+            textTransform: "uppercase",
             color: theme.colors.textMuted,
             marginBottom: 7,
           }}
@@ -673,9 +777,11 @@ export function Input(props) {
           fontFamily: theme.font.body,
           fontSize: 16, // 16 evita o zoom automático de alguns teclados
           color: theme.colors.textPrimary,
-          backgroundColor: theme.isDark ? theme.colors.bg : theme.colors.surface,
+          backgroundColor: theme.isDark
+            ? theme.colors.bg
+            : theme.colors.surface,
           minWidth: 0,
-          ...(Platform.OS === 'web' ? { outlineStyle: 'none' } : null),
+          ...(Platform.OS === "web" ? { outlineStyle: "none" } : null),
         },
         props.style,
       ]}
@@ -703,8 +809,8 @@ export function Checkbox({ label, value, onChange, description }) {
     <Pressable
       onPress={() => onChange(!value)}
       style={({ pressed }) => ({
-        flexDirection: 'row',
-        alignItems: description ? 'flex-start' : 'center',
+        flexDirection: "row",
+        alignItems: description ? "flex-start" : "center",
         gap: theme.space.md,
         paddingVertical: theme.space.sm,
         opacity: pressed ? 0.7 : 1,
@@ -717,23 +823,41 @@ export function Checkbox({ label, value, onChange, description }) {
           borderRadius: 7,
           borderWidth: 1.5,
           borderColor: value ? theme.colors.accent : theme.colors.borderStrong,
-          backgroundColor: value ? theme.colors.accent : 'transparent',
-          alignItems: 'center',
-          justifyContent: 'center',
+          backgroundColor: value ? theme.colors.accent : "transparent",
+          alignItems: "center",
+          justifyContent: "center",
           marginTop: description ? 1 : 0,
         }}
       >
         <Animated.View
           style={{
             opacity: anim,
-            transform: [{ scale: anim.interpolate({ inputRange: [0, 1], outputRange: [0.5, 1] }) }],
+            transform: [
+              {
+                scale: anim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0.5, 1],
+                }),
+              },
+            ],
           }}
         >
-          <Icon name="check" size={13} color={theme.isDark ? '#0B0F0C' : '#FFFFFF'} strokeWidth={2.6} />
+          <Icon
+            name="check"
+            size={13}
+            color={theme.isDark ? "#0B0F0C" : "#FFFFFF"}
+            strokeWidth={2.6}
+          />
         </Animated.View>
       </View>
       <View style={{ flex: 1 }}>
-        <Text style={{ fontFamily: theme.font.body, ...theme.type.body, color: theme.colors.textPrimary }}>
+        <Text
+          style={{
+            fontFamily: theme.font.body,
+            ...theme.type.body,
+            color: theme.colors.textPrimary,
+          }}
+        >
           {label}
         </Text>
         {description ? (
@@ -755,7 +879,10 @@ export function Checkbox({ label, value, onChange, description }) {
 
 export function SegmentedControl({ options, value, onChange }) {
   const theme = useTheme();
-  const index = Math.max(0, options.findIndex((o) => o.value === value));
+  const index = Math.max(
+    0,
+    options.findIndex((o) => o.value === value),
+  );
   const anim = useRef(new Animated.Value(index)).current;
   const [width, setWidth] = React.useState(0);
   const ease = useBezier(theme.motion.easing.standard);
@@ -779,19 +906,19 @@ export function SegmentedControl({ options, value, onChange }) {
     <View
       onLayout={(e) => setWidth(e.nativeEvent.layout.width)}
       style={{
-        flexDirection: 'row',
+        flexDirection: "row",
         borderRadius: theme.radii.pill,
         backgroundColor: theme.isDark ? theme.colors.bg : theme.colors.bgSoft,
         borderWidth: 1,
         borderColor: theme.colors.border,
         padding: PAD,
-        overflow: 'hidden',
+        overflow: "hidden",
       }}
     >
       {segment > 0 ? (
         <Animated.View
           style={{
-            position: 'absolute',
+            position: "absolute",
             top: PAD,
             bottom: PAD,
             left: PAD,
@@ -820,7 +947,7 @@ export function SegmentedControl({ options, value, onChange }) {
               minWidth: 0,
               paddingVertical: 8,
               paddingHorizontal: 4,
-              alignItems: 'center',
+              alignItems: "center",
             }}
           >
             <Text
@@ -829,11 +956,11 @@ export function SegmentedControl({ options, value, onChange }) {
               style={{
                 fontFamily: theme.font.bodyBold,
                 ...theme.type.caption,
-                textTransform: 'uppercase',
+                textTransform: "uppercase",
                 color: active
                   ? theme.isDark
-                    ? '#0B0F0C'
-                    : '#FFFFFF'
+                    ? "#0B0F0C"
+                    : "#FFFFFF"
                   : theme.colors.textMuted,
               }}
             >
@@ -848,7 +975,7 @@ export function SegmentedControl({ options, value, onChange }) {
 
 /* ---------- Estados ---------- */
 
-export function EmptyState({ title, message, action, icon = '✦' }) {
+export function EmptyState({ title, message, action, icon = "✦" }) {
   const theme = useTheme();
   return (
     <FadeInView>
@@ -860,7 +987,7 @@ export function EmptyState({ title, message, action, icon = '✦' }) {
           borderColor: theme.colors.border,
           paddingVertical: theme.space.xxl,
           paddingHorizontal: theme.space.xl,
-          alignItems: 'center',
+          alignItems: "center",
         }}
       >
         <View
@@ -868,13 +995,15 @@ export function EmptyState({ title, message, action, icon = '✦' }) {
             width: 52,
             height: 52,
             borderRadius: theme.radii.pill,
-            alignItems: 'center',
-            justifyContent: 'center',
+            alignItems: "center",
+            justifyContent: "center",
             backgroundColor: withAlphaSafe(theme.colors.accent, 0.12),
             marginBottom: theme.space.lg,
           }}
         >
-          <Text style={{ fontSize: 22, color: theme.colors.accent }}>{icon}</Text>
+          <Text style={{ fontSize: 22, color: theme.colors.accent }}>
+            {icon}
+          </Text>
         </View>
         <Text
           style={{
@@ -882,12 +1011,17 @@ export function EmptyState({ title, message, action, icon = '✦' }) {
             ...theme.type.h3,
             color: theme.colors.textPrimary,
             marginBottom: 6,
-            textAlign: 'center',
+            textAlign: "center",
           }}
         >
           {title}
         </Text>
-        <Note style={{ textAlign: 'center', marginBottom: action ? theme.space.lg : 0 }}>
+        <Note
+          style={{
+            textAlign: "center",
+            marginBottom: action ? theme.space.lg : 0,
+          }}
+        >
           {message}
         </Note>
         {action}
@@ -897,15 +1031,23 @@ export function EmptyState({ title, message, action, icon = '✦' }) {
 }
 
 /** Bloco de carregamento com pulsação — evita saltos bruscos de layout. */
-export function Skeleton({ height = 16, width = '100%', radius, style }) {
+export function Skeleton({ height = 16, width = "100%", radius, style }) {
   const theme = useTheme();
   const pulse = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     const loop = Animated.loop(
       Animated.sequence([
-        Animated.timing(pulse, { toValue: 1, duration: 700, useNativeDriver: true }),
-        Animated.timing(pulse, { toValue: 0, duration: 700, useNativeDriver: true }),
+        Animated.timing(pulse, {
+          toValue: 1,
+          duration: 700,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulse, {
+          toValue: 0,
+          duration: 700,
+          useNativeDriver: true,
+        }),
       ]),
     );
     loop.start();
@@ -920,7 +1062,10 @@ export function Skeleton({ height = 16, width = '100%', radius, style }) {
           width,
           borderRadius: radius ?? theme.radii.sm,
           backgroundColor: theme.colors.bgSoft,
-          opacity: pulse.interpolate({ inputRange: [0, 1], outputRange: [0.45, 0.9] }),
+          opacity: pulse.interpolate({
+            inputRange: [0, 1],
+            outputRange: [0.45, 0.9],
+          }),
         },
         style,
       ]}
@@ -931,7 +1076,14 @@ export function Skeleton({ height = 16, width = '100%', radius, style }) {
 /* ---------- Progresso ---------- */
 
 /** Barra de progresso com preenchimento em gradiente e animação de entrada. */
-export function ProgressBar({ value, goal, color, label, unit = 'g', height = 10 }) {
+export function ProgressBar({
+  value,
+  goal,
+  color,
+  label,
+  unit = "g",
+  height = 10,
+}) {
   const theme = useTheme();
   const pct = goal ? Math.max(0, Math.min(100, (value / goal) * 100)) : 0;
   const anim = useRef(new Animated.Value(0)).current;
@@ -946,20 +1098,27 @@ export function ProgressBar({ value, goal, color, label, unit = 'g', height = 10
     }).start();
   }, [pct]);
 
-  const width = anim.interpolate({ inputRange: [0, 100], outputRange: ['0%', '100%'] });
+  const width = anim.interpolate({
+    inputRange: [0, 100],
+    outputRange: ["0%", "100%"],
+  });
   const complete = pct >= 100;
 
   return (
     <View style={{ marginBottom: theme.space.md }}>
       {label ? (
         <View
-          style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}
+          style={{
+            flexDirection: "row",
+            justifyContent: "space-between",
+            marginBottom: 6,
+          }}
         >
           <Note color={theme.colors.textSecondary}>{label}</Note>
           <Note color={complete ? theme.colors.good : theme.colors.textMuted}>
             {Math.round(value)}
             {unit}
-            {goal ? ` / ${goal}${unit}` : ''}
+            {goal ? ` / ${goal}${unit}` : ""}
           </Note>
         </View>
       ) : null}
@@ -968,12 +1127,12 @@ export function ProgressBar({ value, goal, color, label, unit = 'g', height = 10
           height,
           borderRadius: theme.radii.pill,
           backgroundColor: theme.isDark ? theme.colors.bg : theme.colors.bgSoft,
-          overflow: 'hidden',
+          overflow: "hidden",
           borderWidth: 1,
           borderColor: theme.colors.hairline,
         }}
       >
-        <Animated.View style={{ width, height: '100%' }}>
+        <Animated.View style={{ width, height: "100%" }}>
           <LinearGradient
             colors={color ? [color, color] : theme.gradients.accent}
             start={{ x: 0, y: 0 }}
