@@ -229,58 +229,51 @@ export function Card({ children, accent, onPress, style, level = 'surface', padd
 
   const Wrapper = onPress ? Pressable : View;
 
+  // Brilho por trás do cartão, na cor do próprio cartão (accent). O React
+  // Native não tem desfoque nativo sem bibliotecas extra, por isso simula-se
+  // com vários anéis semitransparentes, cada vez maiores, com uma opacidade
+  // que sobe aos poucos — quantos mais degraus, mais contínuo (menos
+  // "aos saltos") o resultado parece. Valores baixos de propósito, para
+  // ficar subtil em vez de berrante.
+  const GLOW_RINGS = [
+    { inset: -22, alpha: 0.015 },
+    { inset: -18, alpha: 0.025 },
+    { inset: -14, alpha: 0.035 },
+    { inset: -10, alpha: 0.045 },
+    { inset: -6, alpha: 0.06 },
+    { inset: -3, alpha: 0.075 },
+  ];
+
   return (
     <Animated.View style={{ transform: [{ scale }], marginBottom: theme.space.lg }}>
-      {accent ? (
-        // Brilho por trás do cartão, na cor do próprio cartão (accent).
-        // Como o React Native não tem desfoque nativo sem bibliotecas
-        // extra, simula-se com 3 anéis semitransparentes cada vez maiores
-        // e mais ténues — o mais próximo do cartão ainda ganha uma sombra
-        // colorida a sério no iOS (shadowColor), que aí acrescenta desfoque
-        // real por cima disto.
-        <>
-          <View
-            pointerEvents="none"
-            style={{
-              position: 'absolute',
-              top: -16,
-              left: -16,
-              right: -16,
-              bottom: -16,
-              borderRadius: theme.radii.lg + 16,
-              backgroundColor: withAlphaSafe(accent, 0.05),
-            }}
-          />
-          <View
-            pointerEvents="none"
-            style={{
-              position: 'absolute',
-              top: -9,
-              left: -9,
-              right: -9,
-              bottom: -9,
-              borderRadius: theme.radii.lg + 9,
-              backgroundColor: withAlphaSafe(accent, 0.1),
-            }}
-          />
-          <View
-            pointerEvents="none"
-            style={{
-              position: 'absolute',
-              top: -3,
-              left: -3,
-              right: -3,
-              bottom: -3,
-              borderRadius: theme.radii.lg + 3,
-              backgroundColor: withAlphaSafe(accent, 0.18),
-              shadowColor: accent,
-              shadowOpacity: 0.55,
-              shadowRadius: 18,
-              shadowOffset: { width: 0, height: 0 },
-            }}
-          />
-        </>
-      ) : null}
+      {accent
+        ? GLOW_RINGS.map((ring, i) => (
+            <View
+              key={ring.inset}
+              pointerEvents="none"
+              style={{
+                position: 'absolute',
+                top: ring.inset,
+                left: ring.inset,
+                right: ring.inset,
+                bottom: ring.inset,
+                borderRadius: theme.radii.lg - ring.inset,
+                backgroundColor: withAlphaSafe(accent, ring.alpha),
+                ...(i === GLOW_RINGS.length - 1
+                  ? {
+                      // Só o anel mais próximo do cartão ganha sombra a
+                      // sério (com desfoque real no iOS) — os restantes
+                      // são só para o esbater ficar contínuo.
+                      shadowColor: accent,
+                      shadowOpacity: 0.3,
+                      shadowRadius: 14,
+                      shadowOffset: { width: 0, height: 0 },
+                    }
+                  : null),
+              }}
+            />
+          ))
+        : null}
       <Wrapper
         onPress={onPress}
         onPressIn={onPressIn}
