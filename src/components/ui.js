@@ -229,51 +229,34 @@ export function Card({ children, accent, onPress, style, level = 'surface', padd
 
   const Wrapper = onPress ? Pressable : View;
 
-  // Brilho por trás do cartão, na cor do próprio cartão (accent). O React
-  // Native não tem desfoque nativo sem bibliotecas extra, por isso simula-se
-  // com vários anéis semitransparentes, cada vez maiores, com uma opacidade
-  // que sobe aos poucos — quantos mais degraus, mais contínuo (menos
-  // "aos saltos") o resultado parece. Valores baixos de propósito, para
-  // ficar subtil em vez de berrante.
-  const GLOW_RINGS = [
-    { inset: -22, alpha: 0.015 },
-    { inset: -18, alpha: 0.025 },
-    { inset: -14, alpha: 0.035 },
-    { inset: -10, alpha: 0.045 },
-    { inset: -6, alpha: 0.06 },
-    { inset: -3, alpha: 0.075 },
-  ];
+  // Brilho por trás do cartão, na cor do próprio cartão (accent): uma única
+  // forma larga e muito ténue, sem seguir os cantos do cartão (por isso o
+  // raio é bem maior do que o do cartão) — fica mais espalhado e contínuo
+  // do que vários anéis sobrepostos. No iOS ainda ganha desfoque a sério
+  // via sombra colorida; no Android fica só a forma suave e baixinha de
+  // opacidade, sem contorno percetível.
+  const GLOW_SPREAD = 46;
 
   return (
     <Animated.View style={{ transform: [{ scale }], marginBottom: theme.space.lg }}>
-      {accent
-        ? GLOW_RINGS.map((ring, i) => (
-            <View
-              key={ring.inset}
-              pointerEvents="none"
-              style={{
-                position: 'absolute',
-                top: ring.inset,
-                left: ring.inset,
-                right: ring.inset,
-                bottom: ring.inset,
-                borderRadius: theme.radii.lg - ring.inset,
-                backgroundColor: withAlphaSafe(accent, ring.alpha),
-                ...(i === GLOW_RINGS.length - 1
-                  ? {
-                      // Só o anel mais próximo do cartão ganha sombra a
-                      // sério (com desfoque real no iOS) — os restantes
-                      // são só para o esbater ficar contínuo.
-                      shadowColor: accent,
-                      shadowOpacity: 0.3,
-                      shadowRadius: 14,
-                      shadowOffset: { width: 0, height: 0 },
-                    }
-                  : null),
-              }}
-            />
-          ))
-        : null}
+      {accent ? (
+        <View
+          pointerEvents="none"
+          style={{
+            position: 'absolute',
+            top: -GLOW_SPREAD,
+            left: -GLOW_SPREAD,
+            right: -GLOW_SPREAD,
+            bottom: -GLOW_SPREAD,
+            borderRadius: 999,
+            backgroundColor: withAlphaSafe(accent, 0.07),
+            shadowColor: accent,
+            shadowOpacity: 0.35,
+            shadowRadius: 40,
+            shadowOffset: { width: 0, height: 0 },
+          }}
+        />
+      ) : null}
       <Wrapper
         onPress={onPress}
         onPressIn={onPressIn}
