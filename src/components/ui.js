@@ -250,10 +250,10 @@ export function Card({ children, accent, onPress, style, level = 'surface', padd
             borderRadius: theme.radii.lg,
             backgroundColor: accent,
             shadowColor: accent,
-            shadowOpacity: 0.5,
-            shadowRadius: 24,
+            shadowOpacity: 0.65,
+            shadowRadius: 36,
             shadowOffset: { width: 0, height: 0 },
-            elevation: 12,
+            elevation: 14,
           }}
         />
       ) : null}
