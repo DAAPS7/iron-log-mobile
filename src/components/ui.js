@@ -231,6 +231,56 @@ export function Card({ children, accent, onPress, style, level = 'surface', padd
 
   return (
     <Animated.View style={{ transform: [{ scale }], marginBottom: theme.space.lg }}>
+      {accent ? (
+        // Brilho por trás do cartão, na cor do próprio cartão (accent).
+        // Como o React Native não tem desfoque nativo sem bibliotecas
+        // extra, simula-se com 3 anéis semitransparentes cada vez maiores
+        // e mais ténues — o mais próximo do cartão ainda ganha uma sombra
+        // colorida a sério no iOS (shadowColor), que aí acrescenta desfoque
+        // real por cima disto.
+        <>
+          <View
+            pointerEvents="none"
+            style={{
+              position: 'absolute',
+              top: -16,
+              left: -16,
+              right: -16,
+              bottom: -16,
+              borderRadius: theme.radii.lg + 16,
+              backgroundColor: withAlphaSafe(accent, 0.05),
+            }}
+          />
+          <View
+            pointerEvents="none"
+            style={{
+              position: 'absolute',
+              top: -9,
+              left: -9,
+              right: -9,
+              bottom: -9,
+              borderRadius: theme.radii.lg + 9,
+              backgroundColor: withAlphaSafe(accent, 0.1),
+            }}
+          />
+          <View
+            pointerEvents="none"
+            style={{
+              position: 'absolute',
+              top: -3,
+              left: -3,
+              right: -3,
+              bottom: -3,
+              borderRadius: theme.radii.lg + 3,
+              backgroundColor: withAlphaSafe(accent, 0.18),
+              shadowColor: accent,
+              shadowOpacity: 0.55,
+              shadowRadius: 18,
+              shadowOffset: { width: 0, height: 0 },
+            }}
+          />
+        </>
+      ) : null}
       <Wrapper
         onPress={onPress}
         onPressIn={onPressIn}
