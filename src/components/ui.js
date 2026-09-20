@@ -229,31 +229,31 @@ export function Card({ children, accent, onPress, style, level = 'surface', padd
 
   const Wrapper = onPress ? Pressable : View;
 
-  // Brilho por trás do cartão, na cor do próprio cartão (accent): uma única
-  // forma larga e muito ténue, sem seguir os cantos do cartão (por isso o
-  // raio é bem maior do que o do cartão) — fica mais espalhado e contínuo
-  // do que vários anéis sobrepostos. No iOS ainda ganha desfoque a sério
-  // via sombra colorida; no Android fica só a forma suave e baixinha de
-  // opacidade, sem contorno percetível.
-  const GLOW_SPREAD = 46;
-
   return (
     <Animated.View style={{ transform: [{ scale }], marginBottom: theme.space.lg }}>
       {accent ? (
+        // Brilho por trás do cartão: uma forma da cor do cartão (accent),
+        // do mesmo tamanho/posição, mas ligeiramente para dentro — fica
+        // totalmente escondida atrás do cartão (que é opaco), só se vê a
+        // sua sombra a "vazar" para fora. É o equivalente nativo ao
+        // box-shadow do CSS: desfoque a sério no iOS; no Android não há
+        // sombra colorida nativa, por isso fica só uma sombra normal
+        // (elevation) para dar alguma profundidade.
         <View
           pointerEvents="none"
           style={{
             position: 'absolute',
-            top: -GLOW_SPREAD,
-            left: -GLOW_SPREAD,
-            right: -GLOW_SPREAD,
-            bottom: -GLOW_SPREAD,
-            borderRadius: 999,
-            backgroundColor: withAlphaSafe(accent, 0.07),
+            top: 6,
+            left: 6,
+            right: 6,
+            bottom: 6,
+            borderRadius: theme.radii.lg,
+            backgroundColor: accent,
             shadowColor: accent,
-            shadowOpacity: 0.35,
-            shadowRadius: 40,
+            shadowOpacity: 0.5,
+            shadowRadius: 24,
             shadowOffset: { width: 0, height: 0 },
+            elevation: 12,
           }}
         />
       ) : null}
